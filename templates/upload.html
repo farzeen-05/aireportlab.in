@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% block title %}Upload File{% endblock %}
+{% block breadcrumb_current %}Upload File{% endblock %}
+
+{% block body %}
+
+<div class="page-header">
+  <h1 class="page-title">Upload File</h1>
+  <p class="page-subtitle">Analyze your documents and datasets instantly with AI.</p>
+</div>
+
+<div class="grid grid-2" style="align-items:start;">
+
+  <!-- Upload Card -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title"><i class="bx bx-cloud-upload" style="color:var(--accent);margin-right:0.4rem;"></i>Select File</span>
+    </div>
+    <div class="card-body" style="padding:2rem;">
+
+      <form id="uploadForm" action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
+
+        <!-- Drop Zone -->
+        <div id="dropZone" style="
+          border: 2px dashed var(--border2);
+          border-radius: var(--radius);
+          padding: 2.5rem 1.5rem;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          background: var(--bg2);
+          margin-bottom: 1.25rem;
+          position: relative;
+        ">
+          <input
+            type="file"
+            name="file"
+            id="fileInput"
+            accept=".xlsx,.xls,.csv,.pdf,.doc,.docx,.json,.txt"
+            required
+            style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"
+          />
+          <i class="bx bx-cloud-upload" id="dropIcon" style="font-size:2.8rem;color:var(--accent);display:block;margin-bottom:0.75rem;"></i>
+          <div id="dropLabel" style="font-weight:600;font-size:0.9rem;color:var(--text2);margin-bottom:0.3rem;">
+            Drag & drop your file here
+          </div>
+          <div style="font-size:0.78rem;color:var(--muted);">or click to browse files</div>
+
+          <!-- Selected file name -->
+          <div id="fileName" style="
+            display:none;
+            margin-top:1rem;
+            padding:0.5rem 1rem;
+            background:var(--accent-dim);
+            border:1px solid rgba(59,130,246,0.25);
+            border-radius:6px;
+            font-size:0.82rem;
+            color:var(--accent2);
+            font-weight:500;
+          "></div>
+        </div>
+
+        <!-- Supported format badges — single set only -->
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:1.5rem;">
+          <span class="badge badge-green">CSV</span>
+          <span class="badge badge-blue">XLSX</span>
+          <span class="badge badge-red">PDF</span>
+          <span class="badge badge-purple">DOCX</span>
+          <span class="badge badge-teal">JSON</span>
+          <span class="badge badge-amber">TXT</span>
+        </div>
+
+        <button id="submitBtn" type="submit" class="btn btn-primary w-full btn-lg">
+          <i class="bx bx-analyse"></i> Analyze File
+        </button>
+
+      </form>
+
+      <!-- Loading State -->
+      <div id="loadingState" style="display:none;text-align:center;padding:1.5rem 0 0;">
+        <div style="margin-bottom:1rem;">
+          <div style="
+            width:48px;height:48px;
+            border:3px solid var(--border);
+            border-top-color:var(--accent);
+            border-radius:50%;
+            animation:spin 0.7s linear infinite;
+            margin:0 auto 1rem;
+          "></div>
+          <div class="fw-bold" style="font-size:0.95rem;margin-bottom:0.3rem;">Analyzing your file…</div>
+          <p class="text-muted text-sm">Extracting content · Generating insights · Building visualizations · Preparing report</p>
+        </div>
+
+        <!-- Progress steps -->
+        <div style="display:flex;flex-direction:column;gap:0.4rem;text-align:left;margin-top:1rem;">
+          {% for step in ['Reading file structure', 'Running AI analysis', 'Generating visualizations', 'Building report'] %}
+          <div class="loading-step" style="
+            display:flex;align-items:center;gap:0.6rem;
+            padding:0.45rem 0.75rem;
+            background:var(--bg2);
+            border:1px solid var(--border);
+            border-radius:6px;
+            font-size:0.8rem;
+            color:var(--muted);
+          ">
+            <span class="step-icon" style="width:14px;height:14px;border-radius:50%;background:var(--border);flex-shrink:0;"></span>
+            {{ step }}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Info Panel -->
+  <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+    <!-- How it works -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="bx bx-info-circle" style="color:var(--accent);margin-right:0.4rem;"></i>How It Works</span>
+      </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:0.75rem;">
+        {% for num, title, desc in [
+          ('01', 'Upload', 'Select any supported file from your device.'),
+          ('02', 'AI Analysis', 'Our ML · NLP · DL engines analyze your data.'),
+          ('03', 'Visualize', 'Charts and dashboards are auto-generated.'),
+          ('04', 'Report', 'Download a complete AI-generated PDF report.')
+        ] %}
+        <div style="display:flex;gap:0.85rem;align-items:flex-start;">
+          <div style="
+            width:28px;height:28px;flex-shrink:0;
+            border-radius:50%;
+            background:var(--accent-dim);
+            border:1px solid rgba(59,130,246,0.25);
+            display:flex;align-items:center;justify-content:center;
+            font-family:var(--font-display);
+            font-size:0.65rem;font-weight:800;
+            color:var(--accent2);
+          ">{{ num }}</div>
+          <div>
+            <div class="fw-bold" style="font-size:0.85rem;margin-bottom:0.1rem;">{{ title }}</div>
+            <div class="text-muted text-sm">{{ desc }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Supported formats detail -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="bx bx-file" style="color:var(--amber);margin-right:0.4rem;"></i>Supported Formats</span>
+      </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:0.5rem;">
+        {% for icon, fmt, desc, color in [
+          ('bx-spreadsheet', 'CSV / XLSX', 'Tabular data, auto-charts & stats', '--green'),
+          ('bx-file-blank', 'PDF', 'Document extraction & NLP summary', '--red'),
+          ('bx-file', 'DOCX', 'Word document analysis', '--purple'),
+          ('bx-code-alt', 'JSON', 'Structured data parsing', '--teal'),
+          ('bx-text', 'TXT', 'Plain text summarization', '--amber')
+        ] %}
+        <div style="
+          display:flex;align-items:center;gap:0.75rem;
+          padding:0.5rem 0.75rem;
+          background:var(--bg2);
+          border:1px solid var(--border);
+          border-radius:6px;
+        ">
+          <i class="bx {{ icon }}" style="color:var({{ color }});font-size:1.1rem;flex-shrink:0;"></i>
+          <div>
+            <div style="font-size:0.82rem;font-weight:600;color:var(--text2);">{{ fmt }}</div>
+            <div class="text-muted text-xs">{{ desc }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const form         = document.getElementById('uploadForm');
+  const submitBtn    = document.getElementById('submitBtn');
+  const loadingState = document.getElementById('loadingState');
+  const dropZone     = document.getElementById('dropZone');
+  const fileInput    = document.getElementById('fileInput');
+  const fileName     = document.getElementById('fileName');
+  const dropLabel    = document.getElementById('dropLabel');
+  const dropIcon     = document.getElementById('dropIcon');
+
+  // Show selected filename
+  fileInput.addEventListener('change', function () {
+    if (this.files && this.files[0]) {
+      const name = this.files[0].name;
+      const size = (this.files[0].size / 1024).toFixed(1) + ' KB';
+      fileName.textContent = '📄 ' + name + ' (' + size + ')';
+      fileName.style.display = 'block';
+      dropLabel.textContent = 'File selected — ready to analyze';
+      dropIcon.style.color = 'var(--green)';
+      dropZone.style.borderColor = 'rgba(34,197,94,0.4)';
+    }
+  });
+
+  // Drag over highlight
+  dropZone.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--accent)';
+    dropZone.style.background = 'rgba(59,130,246,0.05)';
+  });
+
+  dropZone.addEventListener('dragleave', function () {
+    dropZone.style.borderColor = 'var(--border2)';
+    dropZone.style.background = 'var(--bg2)';
+  });
+
+  dropZone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--border2)';
+    dropZone.style.background = 'var(--bg2)';
+    if (e.dataTransfer.files.length) {
+      fileInput.files = e.dataTransfer.files;
+      fileInput.dispatchEvent(new Event('change'));
+    }
+  });
+
+  // Submit — show loading
+  form.addEventListener('submit', function () {
+    if (!fileInput.files || !fileInput.files[0]) return;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px;margin-right:0.4rem;vertical-align:middle;"></span> Processing…';
+    loadingState.style.display = 'block';
+
+    // Animate steps one by one
+    const steps = document.querySelectorAll('.loading-step');
+    const icons = document.querySelectorAll('.step-icon');
+    steps.forEach((step, i) => {
+      setTimeout(() => {
+        step.style.color = 'var(--text2)';
+        step.style.borderColor = 'rgba(59,130,246,0.25)';
+        icons[i].style.background = 'var(--accent)';
+        icons[i].style.boxShadow = '0 0 8px var(--accent-glow)';
+      }, i * 1200);
+    });
+  });
+</script>
+{% endblock %}

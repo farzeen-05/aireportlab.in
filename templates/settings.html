@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block breadcrumb_current %}Settings{% endblock %}
+
+{% block body %}
+
+<div class="page-header">
+  <h1 class="page-title">Settings</h1>
+  <p class="page-subtitle">Configure your analysis preferences and report options.</p>
+</div>
+
+<div class="grid grid-2">
+
+  <!-- Analysis Settings -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title"><i class="bx bx-cog" style="color:var(--accent);margin-right:0.4rem;"></i> Analysis Settings</span>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('settings') }}">
+
+        <div class="form-group">
+          <label class="form-label">Default Analysis Type</label>
+          <select class="form-control" name="analysis_type">
+            <option value="Automatic" {% if settings_data and settings_data.analysis_type == "Automatic" %}selected{% endif %}>Automatic</option>
+            <option value="Excel Analysis" {% if settings_data and settings_data.analysis_type == "Excel Analysis" %}selected{% endif %}>Excel Analysis</option>
+            <option value="PDF Analysis" {% if settings_data and settings_data.analysis_type == "PDF Analysis" %}selected{% endif %}>PDF Analysis</option>
+            <option value="Text Summary" {% if settings_data and settings_data.analysis_type == "Text Summary" %}selected{% endif %}>Text Summary</option>
+          </select>
+          <div class="form-hint">Choose how files are analyzed by default when uploaded.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Enable Visual Charts</label>
+          <select class="form-control" name="visual_charts">
+            <option value="Enabled" {% if settings_data and settings_data.visual_charts == "Enabled" %}selected{% endif %}>Enabled</option>
+            <option value="Disabled" {% if settings_data and settings_data.visual_charts == "Disabled" %}selected{% endif %}>Disabled</option>
+          </select>
+          <div class="form-hint">Toggle automatic chart and visualization generation.</div>
+        </div>
+
+        <!-- Report Sections -->
+        <div class="form-group">
+          <label class="form-label">Report Sections to Include</label>
+
+          <div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.4rem;">
+
+            {% set sections = ['Detailed Report', 'Executive Summary', 'Key Insights', 'Structured Breakdown', 'Recommendations'] %}
+            {% for section in sections %}
+            <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;padding:0.5rem 0.75rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px;transition:border-color 0.2s;">
+              <input
+                type="checkbox"
+                name="report_format"
+                value="{{ section }}"
+                {% if settings_data and settings_data.report_format and section in settings_data.report_format %}checked{% endif %}
+                style="accent-color:var(--accent);width:15px;height:15px;"
+              >
+              <span style="font-size:0.85rem;color:var(--text2);">{{ section }}</span>
+            </label>
+            {% endfor %}
+
+          </div>
+          <div class="form-hint">Select which sections appear in generated reports.</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full">
+          <i class="bx bx-save"></i> Save Settings
+        </button>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- Account Info -->
+  <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="bx bx-user" style="color:var(--accent);margin-right:0.4rem;"></i> Account</span>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;">
+          <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:1.2rem;font-weight:800;color:#fff;flex-shrink:0;">
+            {{ session.get('username', 'U')[0].upper() }}
+          </div>
+          <div>
+            <div class="fw-bold" style="font-size:0.95rem;">{{ session.get('username', 'User') }}</div>
+            <div class="text-muted text-sm">Analyst · Free Plan</div>
+          </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline w-full" style="color:var(--red);border-color:rgba(239,68,68,0.3);">
+          <i class="bx bx-log-out"></i> Logout
+        </a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="bx bx-info-circle" style="color:var(--accent);margin-right:0.4rem;"></i> Platform Info</span>
+      </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:0.6rem;">
+        <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+          <span class="text-muted">Version</span>
+          <span class="badge badge-blue">v1.0.0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+          <span class="text-muted">AI Modules</span>
+          <span class="text-accent">ML · NLP · DL</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+          <span class="text-muted">Supported Formats</span>
+          <span style="color:var(--text2);">6+</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+          <span class="text-muted">Charts Engine</span>
+          <span style="color:var(--green);">VisualizationEngine</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+{% endblock %}

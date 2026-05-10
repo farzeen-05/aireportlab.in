@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block breadcrumb_current %}Dashboard{% endblock %}
+
+{% block body %}
+
+<div class="page-header flex-between">
+  <div>
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Welcome back, {{ session.get('username', 'User') }} — here's your overview.</p>
+  </div>
+  <a href="{{ url_for('upload') }}" class="btn btn-primary">
+    <i class="bx bx-upload"></i> Upload File
+  </a>
+</div>
+
+<!-- KPI Cards -->
+<div class="grid grid-4 mb-3">
+  <div class="kpi-card" style="--kpi-accent: var(--accent);">
+    <div class="kpi-label">Files Analyzed</div>
+    <div class="kpi-value">{{ total_uploads or 0 }}</div>
+    <div class="kpi-meta"><i class="bx bx-file"></i> Total uploads</div>
+  </div>
+  <div class="kpi-card" style="--kpi-accent: var(--green);">
+    <div class="kpi-label">Reports Generated</div>
+    <div class="kpi-value">{{ total_reports or 0 }}</div>
+    <div class="kpi-meta kpi-trend-up"><i class="bx bx-trending-up"></i> PDF reports</div>
+  </div>
+  <div class="kpi-card" style="--kpi-accent: var(--amber);">
+    <div class="kpi-label">Supported Formats</div>
+    <div class="kpi-value">6+</div>
+    <div class="kpi-meta"><i class="bx bx-file-blank"></i> CSV · XLSX · PDF · DOCX · JSON · TXT</div>
+  </div>
+  <div class="kpi-card" style="--kpi-accent: var(--purple);">
+    <div class="kpi-label">AI Modules</div>
+    <div class="kpi-value" style="font-size:1.1rem;">ML · NLP · DL</div>
+    <div class="kpi-meta"><i class="bx bx-brain"></i> Active engines</div>
+  </div>
+</div>
+
+<!-- Feature Cards -->
+<div class="grid grid-3 mb-3">
+  <div class="card">
+    <div class="card-body">
+      <i class="bx bx-data text-accent" style="font-size:1.8rem;"></i>
+      <h3 class="font-display fw-bold mt-2 mb-1" style="font-size:0.95rem;">Smart Data Analysis</h3>
+      <p class="text-muted text-sm">Automatically clean, analyze, and summarize CSV, Excel, PDF, JSON, TXT and DOCX files.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <i class="bx bx-bar-chart-alt-2 text-green" style="font-size:1.8rem;"></i>
+      <h3 class="font-display fw-bold mt-2 mb-1" style="font-size:0.95rem;">Visual Insights</h3>
+      <p class="text-muted text-sm">Generate dynamic charts, dashboards, and trend visuals for better interpretation.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <i class="bx bx-brain text-amber" style="font-size:1.8rem;"></i>
+      <h3 class="font-display fw-bold mt-2 mb-1" style="font-size:0.95rem;">AI Intelligence</h3>
+      <p class="text-muted text-sm">Detect anomalies, extract insights, summarize content, and generate smart reports.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Activity + Quick Actions -->
+<div class="grid grid-3 mb-3">
+
+  <!-- Recent Activity (spans 2 cols) -->
+  <div class="card" style="grid-column: span 2;">
+    <div class="card-header">
+      <span class="card-title">Recent Activity</span>
+      <a href="{{ url_for('history') }}" class="btn btn-ghost btn-sm">View All →</a>
+    </div>
+    <div class="card-body" style="padding:0;">
+      {% if recent_uploads %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>File Name</th>
+              <th>Type</th>
+              <th>Uploaded On</th>
+              <th style="text-align:center;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in recent_uploads %}
+            <tr>
+              <td class="text-muted">{{ loop.index }}</td>
+              <td class="fw-mid truncate" style="max-width:200px;">{{ row.file_name }}</td>
+              <td><span class="badge badge-blue">{{ row.file_type | upper }}</span></td>
+              <td class="text-muted text-sm">{{ row.upload_date }}</td>
+              <td style="text-align:center;">
+                <a href="{{ url_for('view_report', report_id=row.id) }}" class="btn btn-outline btn-sm">
+                  <i class="bx bx-show"></i> View
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <i class="bx bx-folder-open"></i>
+        <p>No uploads yet. Start by uploading your first file.</p>
+        <a href="{{ url_for('upload') }}" class="btn btn-primary btn-sm mt-1">Upload Now</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Quick Actions</span>
+    </div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:0.6rem;">
+      <a href="{{ url_for('upload') }}" class="btn btn-primary w-full">
+        <i class="bx bx-upload"></i> Upload New File
+      </a>
+      <a href="{{ url_for('history') }}" class="btn btn-outline w-full">
+        <i class="bx bx-file"></i> View Reports
+      </a>
+      <a href="{{ url_for('settings') }}" class="btn btn-outline w-full">
+        <i class="bx bx-cog"></i> Settings
+      </a>
+      <hr class="divider">
+      <a href="{{ url_for('logout') }}" class="btn btn-ghost w-full" style="color:var(--red);">
+        <i class="bx bx-log-out"></i> Logout
+      </a>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

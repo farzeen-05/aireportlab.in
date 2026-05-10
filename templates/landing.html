@@ -1,0 +1,817 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+{% block meta_desc %}AI-powered document and dataset intelligence platform for automated analysis, visualization, anomaly detection, and smart reporting.{% endblock %}
+
+{% block extra_styles %}
+  /* ─── NOISE OVERLAY ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* ─── NAVBAR ─── */
+  .l-nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 4rem;
+    background: rgba(5,7,15,0.72);
+    backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .l-nav-logo {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.3rem;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .l-nav-logo span { color: var(--accent); }
+
+  .l-nav-logo .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: inline-block;
+    animation: lpulse 2s ease-in-out infinite;
+  }
+
+  @keyframes lpulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .l-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+    list-style: none;
+  }
+
+  .l-nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+
+  .l-nav-links a:hover { color: var(--text); }
+
+  .l-nav-cta { display: flex; gap: 0.75rem; align-items: center; }
+
+  .l-btn {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 0.55rem 1.25rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s ease;
+  }
+
+  .l-btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .l-btn-ghost:hover { background: var(--surface); color: var(--text); border-color: rgba(255,255,255,0.14); }
+
+  .l-btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 24px rgba(59,130,246,0.35);
+  }
+
+  .l-btn-primary:hover {
+    background: var(--accent2);
+    box-shadow: 0 0 36px rgba(59,130,246,0.5);
+    transform: translateY(-1px);
+  }
+
+  .l-btn-lg { padding: 0.8rem 2rem; font-size: 1rem; border-radius: 8px; }
+
+  /* ─── HERO ─── */
+  .l-hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7rem 2rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .l-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+  }
+
+  .l-orb-1 { width: 700px; height: 700px; background: rgba(59,130,246,0.12); top: -200px; left: -200px; }
+  .l-orb-2 { width: 500px; height: 500px; background: rgba(167,139,250,0.08); bottom: -100px; right: -100px; }
+  .l-orb-3 { width: 300px; height: 300px; background: rgba(34,197,94,0.06); top: 40%; left: 55%; }
+
+  .l-grid-overlay {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black, transparent);
+  }
+
+  .l-hero-inner {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    max-width: 860px;
+  }
+
+  .l-badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(59,130,246,0.1);
+    border: 1px solid rgba(59,130,246,0.25);
+    color: var(--accent2);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.35rem 1rem;
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 1.75rem;
+    animation: lfadeUp 0.6s ease both;
+  }
+
+  .l-badge-pill .blink {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: lpulse 1.5s infinite;
+  }
+
+  .l-hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.8rem, 6vw, 5rem);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+    animation: lfadeUp 0.7s 0.1s ease both;
+  }
+
+  .l-hero h1 .highlight {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .l-hero-sub {
+    font-size: 1.15rem;
+    color: var(--muted);
+    max-width: 560px;
+    margin: 0 auto 2.5rem;
+    line-height: 1.7;
+    font-weight: 300;
+    animation: lfadeUp 0.7s 0.2s ease both;
+  }
+
+  .l-hero-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    animation: lfadeUp 0.7s 0.3s ease both;
+  }
+
+  .l-hero-note {
+    margin-top: 1.25rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    animation: lfadeUp 0.7s 0.4s ease both;
+  }
+
+  /* ─── MOCKUP ─── */
+  .l-mockup-wrap {
+    position: relative;
+    max-width: 1000px;
+    margin: 4rem auto 0;
+    padding: 0 2rem;
+    animation: lfadeUp 0.8s 0.5s ease both;
+  }
+
+  .l-mockup-glow {
+    position: absolute;
+    inset: -40px;
+    background: radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.15), transparent 70%);
+    pointer-events: none;
+  }
+
+  .l-mockup {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+    position: relative;
+  }
+
+  .l-mockup-bar {
+    background: var(--surface2);
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .l-mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  .l-mockup-body {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    height: 340px;
+  }
+
+  .l-mockup-sidebar {
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 1.25rem 0;
+  }
+
+  .l-mockup-sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .l-mockup-sidebar-item.active { color: var(--accent2); background: rgba(59,130,246,0.08); }
+  .l-mockup-sidebar-item .icon { width: 14px; height: 14px; border-radius: 3px; background: currentColor; opacity: 0.5; }
+
+  .l-mockup-content { padding: 1.25rem; overflow: hidden; }
+
+  .l-mockup-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+
+  .l-mockup-kpi {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem;
+  }
+
+  .l-mockup-kpi-label { font-size: 0.65rem; color: var(--muted); margin-bottom: 0.25rem; }
+  .l-mockup-kpi-val   { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--text); }
+
+  .l-mockup-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+  .l-mockup-chart {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem;
+    height: 170px;
+    overflow: hidden;
+  }
+
+  .l-chart-label { font-size: 0.65rem; color: var(--muted); margin-bottom: 0.5rem; }
+
+  /* ─── LOGOS STRIP ─── */
+  .l-logos-strip {
+    padding: 2.5rem 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .l-logos-strip p { font-size: 0.75rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1.5rem; }
+
+  .l-formats-row { display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+
+  .l-format-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  .l-format-chip .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* ─── FEATURES ─── */
+  .l-section { padding: 6rem 2rem; max-width: 1200px; margin: 0 auto; }
+
+  .l-section-label { display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 1rem; }
+
+  .l-section-heading { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-weight: 800; letter-spacing: -0.025em; line-height: 1.12; margin-bottom: 1rem; }
+
+  .l-section-sub { color: var(--muted); max-width: 500px; font-size: 1rem; line-height: 1.7; }
+
+  .l-features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-top: 3.5rem; }
+
+  .l-feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem 1.75rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+  }
+
+  .l-feature-card:hover {
+    border-color: rgba(59,130,246,0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 30px rgba(59,130,246,0.07);
+  }
+
+  .l-feature-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; font-size: 1.25rem; }
+
+  .l-feature-card h3 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: -0.01em; }
+
+  .l-feature-card p { color: var(--muted); font-size: 0.88rem; line-height: 1.65; }
+
+  .l-tag { display: inline-block; font-size: 0.68rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 4px; margin-top: 1rem; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  /* ─── HOW IT WORKS ─── */
+  .l-how-section { padding: 6rem 2rem; background: var(--bg2); }
+
+  .l-how-inner { max-width: 1100px; margin: 0 auto; }
+
+  .l-steps-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin-top: 3.5rem;
+    position: relative;
+  }
+
+  .l-steps-grid::before {
+    content: '';
+    position: absolute;
+    top: 28px; left: 10%; right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), var(--purple), transparent);
+    z-index: 0;
+  }
+
+  .l-step { text-align: center; padding: 0 1.5rem; position: relative; z-index: 1; }
+
+  .l-step-num {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--accent);
+    margin: 0 auto 1.25rem;
+  }
+
+  .l-step h4 { font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .l-step p  { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+
+  /* ─── STATS ─── */
+  .l-stats-bar {
+    background: linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(167,139,250,0.06) 100%);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 3.5rem 2rem;
+  }
+
+  .l-stats-inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; text-align: center; }
+
+  .l-stat-val {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .l-stat-label { font-size: 0.85rem; color: var(--muted); margin-top: 0.25rem; }
+
+  /* ─── CTA ─── */
+  .l-cta-section { padding: 7rem 2rem; text-align: center; position: relative; overflow: hidden; }
+
+  .l-cta-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px; height: 600px;
+    background: rgba(59,130,246,0.08);
+  }
+
+  .l-cta-inner { position: relative; z-index: 2; max-width: 600px; margin: 0 auto; }
+
+  .l-cta-inner h2 { font-family: var(--font-display); font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; letter-spacing: -0.03em; margin-bottom: 1rem; line-height: 1.1; }
+
+  .l-cta-inner p { color: var(--muted); margin-bottom: 2.5rem; font-size: 1.05rem; }
+
+  /* ─── LANDING FOOTER ─── */
+  .l-footer {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 2.5rem 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .l-footer .l-logo { font-family: var(--font-display); font-weight: 800; font-size: 1.1rem; color: var(--text); }
+
+  .l-footer .l-footer-links { display: flex; gap: 2rem; list-style: none; }
+
+  .l-footer .l-footer-links a { color: var(--muted); text-decoration: none; font-size: 0.85rem; transition: color 0.2s; }
+  .l-footer .l-footer-links a:hover { color: var(--text); }
+
+  .l-footer .l-footer-copy { font-size: 0.78rem; color: var(--muted); }
+
+  /* ─── ANIMATIONS ─── */
+  @keyframes lfadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .l-reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .l-reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ─── BAR CHART ─── */
+  .bar-group rect { transition: opacity 0.3s; }
+  .bar-group rect:hover { opacity: 0.7; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 900px) {
+    .l-nav { padding: 1rem 1.5rem; }
+    .l-nav-links { display: none; }
+    .l-features-grid { grid-template-columns: 1fr 1fr; }
+    .l-steps-grid    { grid-template-columns: 1fr 1fr; }
+    .l-steps-grid::before { display: none; }
+    .l-stats-inner   { grid-template-columns: 1fr 1fr; }
+    .l-mockup-body   { grid-template-columns: 1fr; height: auto; }
+    .l-mockup-sidebar { display: none; }
+  }
+
+  @media (max-width: 600px) {
+    .l-features-grid { grid-template-columns: 1fr; }
+    .l-steps-grid    { grid-template-columns: 1fr; }
+    .l-stats-inner   { grid-template-columns: 1fr 1fr; }
+    .l-footer { flex-direction: column; align-items: flex-start; padding: 2rem 1.5rem; }
+  }
+{% endblock %}
+
+
+{# Override the entire app shell — no sidebar, no topbar #}
+{% block app_shell %}
+
+  <!-- NAVBAR -->
+  <nav class="l-nav">
+    <a href="#" class="l-nav-logo">
+      <span class="dot"></span>
+      aire<span>port</span>lab
+    </a>
+    <ul class="l-nav-links">
+      <li><a href="#l-features">Features</a></li>
+      <li><a href="#l-how">How it Works</a></li>
+      <li><a href="#l-formats">Formats</a></li>
+    </ul>
+    <div class="l-nav-cta">
+      <a href="{{ url_for('login') }}"    class="l-btn l-btn-ghost">Log in</a>
+      <a href="{{ url_for('register') }}" class="l-btn l-btn-primary">Get Started Free</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="l-hero">
+    <div class="l-orb l-orb-1"></div>
+    <div class="l-orb l-orb-2"></div>
+    <div class="l-orb l-orb-3"></div>
+    <div class="l-grid-overlay"></div>
+
+    <div class="l-hero-inner">
+      <div class="l-badge-pill">
+        <span class="blink"></span>
+        AI-Powered · ML · NLP · Deep Learning
+      </div>
+
+      <h1>
+        Turn Any Document Into<br/>
+        <span class="highlight">Actionable Intelligence</span>
+      </h1>
+
+      <p class="l-hero-sub">
+        Upload CSV, Excel, PDF, JSON, TXT or DOCX files and get instant AI-driven analysis,
+        stunning visualizations, anomaly detection, and automated smart reports — in seconds.
+      </p>
+
+      <div class="l-hero-actions">
+        <a href="{{ url_for('register') }}" class="l-btn l-btn-primary l-btn-lg">
+          ⚡ Start Analyzing for Free
+        </a>
+        <a href="#l-features" class="l-btn l-btn-ghost l-btn-lg">See Features →</a>
+      </div>
+
+      <p class="l-hero-note">No credit card required · Free to start · Instant results</p>
+    </div>
+  </div>
+
+  <!-- MOCKUP -->
+  <div style="padding: 0 2rem 5rem; background: var(--bg);">
+    <div class="l-mockup-wrap l-reveal">
+      <div class="l-mockup-glow"></div>
+      <div class="l-mockup">
+        <div class="l-mockup-bar">
+          <div class="l-mockup-dot" style="background:#ff5f57;"></div>
+          <div class="l-mockup-dot" style="background:#febc2e;"></div>
+          <div class="l-mockup-dot" style="background:#28c840;"></div>
+          <span style="margin-left:1rem;font-size:0.72rem;color:var(--muted);font-family:monospace;">aireportlab — Dashboard</span>
+        </div>
+        <div class="l-mockup-body">
+          <div class="l-mockup-sidebar">
+            <div style="padding:0.6rem 1.25rem;font-size:0.65rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem;">Navigation</div>
+            <div class="l-mockup-sidebar-item active"><div class="icon" style="background:#3b82f6;opacity:1;border-radius:50%;"></div>Dashboard</div>
+            <div class="l-mockup-sidebar-item"><div class="icon"></div>Upload File</div>
+            <div class="l-mockup-sidebar-item"><div class="icon"></div>Reports</div>
+            <div class="l-mockup-sidebar-item"><div class="icon"></div>History</div>
+            <div class="l-mockup-sidebar-item"><div class="icon"></div>Settings</div>
+          </div>
+          <div class="l-mockup-content">
+            <div class="l-mockup-kpis">
+              <div class="l-mockup-kpi">
+                <div class="l-mockup-kpi-label">Files Analyzed</div>
+                <div class="l-mockup-kpi-val" style="color:#3b82f6;">248</div>
+              </div>
+              <div class="l-mockup-kpi">
+                <div class="l-mockup-kpi-label">Reports</div>
+                <div class="l-mockup-kpi-val" style="color:#22c55e;">193</div>
+              </div>
+              <div class="l-mockup-kpi">
+                <div class="l-mockup-kpi-label">Formats</div>
+                <div class="l-mockup-kpi-val" style="color:#f59e0b;">6+</div>
+              </div>
+              <div class="l-mockup-kpi">
+                <div class="l-mockup-kpi-label">AI Modules</div>
+                <div class="l-mockup-kpi-val" style="font-size:0.75rem;color:#a78bfa;">ML·NLP·DL</div>
+              </div>
+            </div>
+            <div class="l-mockup-charts">
+              <div class="l-mockup-chart">
+                <div class="l-chart-label">Monthly Upload Activity</div>
+                <svg viewBox="0 0 220 110" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:calc(100% - 18px);">
+                  <defs>
+                    <linearGradient id="bar-grad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.9"/>
+                      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.3"/>
+                    </linearGradient>
+                  </defs>
+                  <g class="bar-group">
+                    <rect x="8"   y="60" width="20" height="45" fill="url(#bar-grad)" rx="3"/>
+                    <rect x="36"  y="40" width="20" height="65" fill="url(#bar-grad)" rx="3"/>
+                    <rect x="64"  y="50" width="20" height="55" fill="url(#bar-grad)" rx="3"/>
+                    <rect x="92"  y="20" width="20" height="85" fill="url(#bar-grad)" rx="3"/>
+                    <rect x="120" y="35" width="20" height="70" fill="url(#bar-grad)" rx="3"/>
+                    <rect x="148" y="10" width="20" height="95" fill="url(#bar-grad)" rx="3"/>
+                    <rect x="176" y="25" width="20" height="80" fill="url(#bar-grad)" rx="3"/>
+                  </g>
+                  <line x1="0" y1="105" x2="220" y2="105" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+                </svg>
+              </div>
+              <div class="l-mockup-chart">
+                <div class="l-chart-label">Report Accuracy Score</div>
+                <svg viewBox="0 0 220 110" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:calc(100% - 18px);">
+                  <defs>
+                    <linearGradient id="line-fill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#22c55e" stop-opacity="0.25"/>
+                      <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M0 80 C30 70, 50 40, 80 35 S130 15, 160 20 S200 10, 220 8" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"/>
+                  <path d="M0 80 C30 70, 50 40, 80 35 S130 15, 160 20 S200 10, 220 8 L220 105 L0 105 Z" fill="url(#line-fill)"/>
+                  <circle cx="220" cy="8" r="3" fill="#22c55e"/>
+                  <rect x="175" y="0" width="42" height="14" rx="3" fill="rgba(34,197,94,0.15)"/>
+                  <text x="178" y="10" font-size="7" fill="#22c55e" font-family="sans-serif">98.2% ↑</text>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORMATS STRIP -->
+  <div class="l-logos-strip" id="l-formats">
+    <p>Supports all major file formats</p>
+    <div class="l-formats-row">
+      <div class="l-format-chip"><span class="dot" style="background:#22c55e;"></span>CSV</div>
+      <div class="l-format-chip"><span class="dot" style="background:#3b82f6;"></span>XLSX</div>
+      <div class="l-format-chip"><span class="dot" style="background:#ef4444;"></span>PDF</div>
+      <div class="l-format-chip"><span class="dot" style="background:#6366f1;"></span>DOCX</div>
+      <div class="l-format-chip"><span class="dot" style="background:#22c55e;"></span>JSON</div>
+      <div class="l-format-chip"><span class="dot" style="background:#3b82f6;"></span>TXT</div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <section class="l-section" id="l-features">
+    <div class="l-reveal">
+      <div class="l-section-label">Core Capabilities</div>
+      <h2 class="l-section-heading">Everything you need to<br/>understand your data</h2>
+      <p class="l-section-sub">From raw files to polished reports — aireportlab handles the entire analysis pipeline automatically.</p>
+    </div>
+
+    <div class="l-features-grid">
+
+      <div class="l-feature-card l-reveal">
+        <div class="l-feature-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">📊</div>
+        <h3>Smart Data Analysis</h3>
+        <p>Automatically clean, parse, and analyze structured data. Get statistical summaries, outlier detection, and data quality scores instantly.</p>
+        <span class="l-tag" style="background:rgba(59,130,246,0.1);color:#60a5fa;">ML-Powered</span>
+      </div>
+
+      <div class="l-feature-card l-reveal">
+        <div class="l-feature-icon" style="background:rgba(34,197,94,0.12);color:#22c55e;">📈</div>
+        <h3>Visual Insights</h3>
+        <p>Dynamic charts, trend lines, heatmaps, and interactive dashboards generated automatically from your uploaded data.</p>
+        <span class="l-tag" style="background:rgba(34,197,94,0.1);color:#4ade80;">Auto-Generated</span>
+      </div>
+
+      <div class="l-feature-card l-reveal">
+        <div class="l-feature-icon" style="background:rgba(167,139,250,0.12);color:#a78bfa;">🧠</div>
+        <h3>AI Report Generation</h3>
+        <p>Natural language summaries and executive reports generated from your data using advanced NLP — ready to share in seconds.</p>
+        <span class="l-tag" style="background:rgba(167,139,250,0.1);color:#c4b5fd;">NLP</span>
+      </div>
+
+      <div class="l-feature-card l-reveal">
+        <div class="l-feature-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;">⚡</div>
+        <h3>Anomaly Detection</h3>
+        <p>Automatically identify unusual patterns, data spikes, missing values, and statistical outliers that matter most to your analysis.</p>
+        <span class="l-tag" style="background:rgba(245,158,11,0.1);color:#fcd34d;">Deep Learning</span>
+      </div>
+
+      <div class="l-feature-card l-reveal">
+        <div class="l-feature-icon" style="background:rgba(239,68,68,0.12);color:#ef4444;">📄</div>
+        <h3>Document Intelligence</h3>
+        <p>Extract, summarize, and analyze text from PDFs and DOCX files. Understand documents without reading every line.</p>
+        <span class="l-tag" style="background:rgba(239,68,68,0.1);color:#f87171;">OCR + NLP</span>
+      </div>
+
+      <div class="l-feature-card l-reveal">
+        <div class="l-feature-icon" style="background:rgba(20,184,166,0.12);color:#14b8a6;">📤</div>
+        <h3>Export & History</h3>
+        <p>All your reports are saved with full history. Export findings, share dashboards, and track every analysis over time.</p>
+        <span class="l-tag" style="background:rgba(20,184,166,0.1);color:#2dd4bf;">Full History</span>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <div class="l-how-section" id="l-how">
+    <div class="l-how-inner">
+      <div class="l-reveal" style="text-align:center;">
+        <div class="l-section-label">Workflow</div>
+        <h2 class="l-section-heading">How it works</h2>
+        <p class="l-section-sub" style="margin:0 auto;">Get from raw file to actionable report in four simple steps.</p>
+      </div>
+
+      <div class="l-steps-grid l-reveal">
+        <div class="l-step">
+          <div class="l-step-num">01</div>
+          <h4>Upload Your File</h4>
+          <p>Drag and drop any CSV, Excel, PDF, DOCX ,TXT, JSON file into the platform.</p>
+        </div>
+        <div class="l-step">
+          <div class="l-step-num">02</div>
+          <h4>AI Processes It</h4>
+          <p>Our ML & NLP models automatically clean, structure, and analyze your data.</p>
+        </div>
+        <div class="l-step">
+          <div class="l-step-num">03</div>
+          <h4>View Insights</h4>
+          <p>Explore interactive charts, summaries, anomalies, and key findings in the dashboard.</p>
+        </div>
+        <div class="l-step">
+          <div class="l-step-num">04</div>
+          <h4>Export Report</h4>
+          <p>Download a polished AI-generated report or share the live dashboard with your team.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="l-stats-bar">
+    <div class="l-stats-inner l-reveal">
+      <div>
+        <div class="l-stat-val">6+</div>
+        <div class="l-stat-label">File Formats Supported</div>
+      </div>
+      <div>
+        <div class="l-stat-val">3</div>
+        <div class="l-stat-label">AI Modules: ML · NLP · DL</div>
+      </div>
+      <div>
+        <div class="l-stat-val">&lt;30s</div>
+        <div class="l-stat-label">Average Analysis Time</div>
+      </div>
+      <div>
+        <div class="l-stat-val">100%</div>
+        <div class="l-stat-label">Automated — No Code Required</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="l-cta-section">
+    <div class="l-cta-orb"></div>
+    <div class="l-cta-inner l-reveal">
+      <h2>Ready to unlock your<br/>document intelligence?</h2>
+      <p>Join thousands of analysts, data teams, and researchers using aireportlab to transform raw files into insights.</p>
+      <a href="{{ url_for('register') }}" class="l-btn l-btn-primary l-btn-lg">
+        Create Your Free Account →
+      </a>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="l-footer">
+    <div class="l-logo">aireportlab</div>
+    <ul class="l-footer-links">
+      <li><a href="#l-features">Features</a></li>
+      <li><a href="#l-how">How it Works</a></li>
+      <li><a href="{{ url_for('login') }}">Login</a></li>
+      <li><a href="{{ url_for('register') }}">Register</a></li>
+    </ul>
+    <div class="l-footer-copy">© <span id="l-yr"></span> aireportlab — AI Powered Document Analysis</div>
+  </footer>
+
+  <script>
+    document.getElementById('l-yr').textContent = new Date().getFullYear();
+
+    const reveals = document.querySelectorAll('.l-reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((e, i) => {
+        if (e.isIntersecting) {
+          setTimeout(() => e.target.classList.add('visible'), i * 80);
+        }
+      });
+    }, { threshold: 0.08 });
+    reveals.forEach(el => observer.observe(el));
+  </script>
+
+{% endblock app_shell %}

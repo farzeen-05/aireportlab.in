@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Analysis Report{% endblock %}
+{% block breadcrumb_current %}Analysis Report{% endblock %}
+
+{% block body %}
+
+{% if result %}
+
+<!-- Header -->
+<div class="page-header flex-between">
+  <div>
+    <h1 class="page-title">Analysis Report</h1>
+    <p class="page-subtitle">Detected type: <span class="badge badge-blue">{{ result.type | upper }}</span> · File analyzed successfully</p>
+  </div>
+  <div style="display:flex;gap:0.6rem;">
+    <a href="{{ url_for('history') }}" class="btn btn-outline">
+      <i class="bx bx-history"></i> History
+    </a>
+    {% if report_id %}
+    <a href="{{ url_for('download_report', report_id=report_id) }}" class="btn btn-primary" target="_blank">
+      <i class="bx bx-download"></i> Download PDF
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Executive Summary -->
+{% if final_report.executive_summary %}
+<div class="card mb-3">
+  <div class="card-header">
+    <span class="card-title"><i class="bx bx-file-blank" style="color:var(--accent);margin-right:0.4rem;"></i>Executive Summary</span>
+  </div>
+  <div class="card-body">
+    <p style="color:var(--text2);line-height:1.75;font-size:0.9rem;">{{ final_report.executive_summary }}</p>
+  </div>
+</div>
+{% endif %}
+
+<!-- Key Insights -->
+{% if final_report.key_insights %}
+<div class="card mb-3">
+  <div class="card-header">
+    <span class="card-title"><i class="bx bx-bulb" style="color:var(--amber);margin-right:0.4rem;"></i>Key Insights</span>
+  </div>
+  <div class="card-body">
+    <ul style="display:flex;flex-direction:column;gap:0.6rem;padding-left:0;list-style:none;">
+      {% for point in final_report.key_insights %}
+      <li style="display:flex;gap:0.6rem;align-items:flex-start;font-size:0.88rem;color:var(--text2);">
+        <span style="color:var(--accent);margin-top:0.15rem;flex-shrink:0;">✦</span>
+        {{ point }}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
+
+<!-- Visual Dashboard -->
+{% if chart_paths or chart_path %}
+<div class="card mb-3">
+  <div class="card-header">
+    <span class="card-title"><i class="bx bx-bar-chart-alt-2" style="color:var(--green);margin-right:0.4rem;"></i>Visual Dashboard</span>
+  </div>
+  <div class="card-body">
+
+    {% if chart_paths and chart_paths is mapping %}
+
+      <!-- Dataset Overview — full width -->
+      {% if 'dataset_overview' in chart_paths %}
+      <div class="card mb-3" style="background:var(--bg2);">
+        <div class="card-body">
+          <div class="text-muted text-xs text-center" style="text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Dataset Overview</div>
+          <img src="/{{ chart_paths['dataset_overview'] }}" style="width:100%;border-radius:6px;" alt="Dataset Overview">
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Correlation heatmap — full width -->
+      {% if 'correlation_heatmap' in chart_paths %}
+      <div class="card mb-3" style="background:var(--bg2);">
+        <div class="card-body">
+          <div class="text-muted text-xs text-center" style="text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Correlation Matrix</div>
+          <img src="/{{ chart_paths['correlation_heatmap'] }}" style="width:100%;border-radius:6px;" alt="Correlation Heatmap">
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Remaining charts 2-col grid -->
+      <div class="grid grid-2">
+        {% for key, path in chart_paths.items() %}
+          {% if key not in ['dataset_overview', 'correlation_heatmap'] %}
+          <div class="card" style="background:var(--bg2);">
+            <div class="card-body">
+              <div class="text-muted text-xs text-center" style="text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">
+                {{ key | replace('_', ' ') | title }}
+              </div>
+              <img src="/{{ path }}" style="width:100%;border-radius:6px;" alt="{{ key }}" loading="lazy">
+            </div>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+    {% elif chart_path %}
+      <!-- Single chart (PDF/DOCX) -->
+      <div class="card" style="background:var(--bg2);max-width:640px;margin:0 auto;">
+        <div class="card-body">
+          <div class="text-muted text-xs text-center" style="text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Document Analysis</div>
+          <img src="/{{ chart_path }}" style="width:100%;border-radius:6px;" alt="Document chart">
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endif %}
+
+<!-- Structured Breakdown -->
+{% if structured_breakdown %}
+<div class="card mb-3">
+  <div class="card-header">
+    <span class="card-title">
+      <i class="bx bx-table" style="color:var(--purple);margin-right:0.4rem;"></i>
+      {% if result.type in ['csv', 'excel'] %}Column-wise Summary{% else %}Page-wise Summary{% endif %}
+    </span>
+  </div>
+  <div class="card-body" style="padding:0;">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            {% if result.type in ['csv', 'excel'] %}
+              <th>Column</th><th>Type</th><th>Missing %</th><th>Unique</th><th>Summary</th>
+            {% else %}
+              <th>Page</th><th>Summary</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in structured_breakdown %}
+          <tr>
+            {% if result.type in ['csv', 'excel'] %}
+              <td class="fw-mid">{{ item.column }}</td>
+              <td><span class="badge badge-muted">{{ item.type }}</span></td>
+              <td class="text-muted">{{ item.missing_percent }}%</td>
+              <td class="text-muted">{{ item.unique_values }}</td>
+              <td class="text-muted text-sm">{{ item.summary }}</td>
+            {% else %}
+              <td class="fw-mid">{{ item.page }}</td>
+              <td class="text-muted text-sm">{{ item.summary }}</td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Recommendations -->
+{% if final_report.recommendations %}
+<div class="card mb-3">
+  <div class="card-header">
+    <span class="card-title"><i class="bx bx-check-shield" style="color:var(--teal);margin-right:0.4rem;"></i>Recommendations</span>
+  </div>
+  <div class="card-body">
+    <ul style="display:flex;flex-direction:column;gap:0.6rem;padding-left:0;list-style:none;">
+      {% for item in final_report.recommendations %}
+      <li style="display:flex;gap:0.6rem;align-items:flex-start;font-size:0.88rem;color:var(--text2);">
+        <span style="color:var(--teal);margin-top:0.15rem;flex-shrink:0;">→</span>
+        {{ item }}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
+
+<!-- Download -->
+<div class="card mb-3">
+  <div class="card-body text-center" style="padding:2rem;">
+    <div class="text-muted text-sm mb-2">Your full AI-generated PDF report is ready to download.</div>
+    <a href="{{ url_for('download_report', report_id=report_id) }}" class="btn btn-primary btn-lg" target="_blank">
+      <i class="bx bx-download"></i> Download PDF Report
+    </a>
+  </div>
+</div>
+
+{% else %}
+
+<!-- No result -->
+<div class="page-header">
+  <h1 class="page-title">No Report Available</h1>
+</div>
+<div class="card">
+  <div class="empty-state">
+    <i class="bx bx-upload"></i>
+    <p>No analysis result found. Please upload a file first to generate a report.</p>
+    <a href="{{ url_for('upload') }}" class="btn btn-primary btn-sm mt-1">Upload File</a>
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}

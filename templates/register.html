@@ -1,0 +1,636 @@
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+{% block meta_desc %}Create your free aireportlab account.{% endblock %}
+
+{% block extra_styles %}
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .auth-page {
+    min-height: 100vh;
+    display: flex;
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .auth-orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(130px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .auth-orb-1 { width: 600px; height: 600px; background: rgba(59,130,246,0.1);  top: -200px; right: -200px; }
+  .auth-orb-2 { width: 400px; height: 400px; background: rgba(167,139,250,0.07); bottom: -100px; left: -100px; }
+
+  .auth-grid {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black, transparent);
+    z-index: 0;
+  }
+
+  /* ── Left panel ── */
+  .auth-left {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    padding: 4rem;
+    position: relative;
+    z-index: 1;
+    border-right: 1px solid var(--border);
+  }
+
+  @media (min-width: 1024px) { .auth-left { display: flex; } }
+
+  .auth-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 3rem;
+    text-decoration: none;
+  }
+
+  .auth-brand-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: adot 2s ease-in-out infinite;
+  }
+
+  @keyframes adot {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .auth-brand-name {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.3rem;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .auth-brand-name span { color: var(--accent); }
+
+  .auth-left-title {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 3vw, 2.8rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.25rem;
+  }
+
+  .auth-left-title .grad {
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .auth-left-sub {
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.7;
+    max-width: 380px;
+    margin-bottom: 2.5rem;
+  }
+
+  /* Steps */
+  .auth-steps { display: flex; flex-direction: column; gap: 1.25rem; }
+
+  .auth-step { display: flex; align-items: flex-start; gap: 1rem; }
+
+  .auth-step-num {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    border: 1px solid rgba(59,130,246,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--accent2);
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+
+  .auth-step-text h5 { font-size: 0.88rem; font-weight: 600; color: var(--text); margin-bottom: 0.15rem; }
+  .auth-step-text p  { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+
+  /* Testimonial card */
+  .auth-testimonial {
+    margin-top: 3rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    max-width: 380px;
+  }
+
+  .auth-testimonial-text { font-size: 0.85rem; color: var(--text2); line-height: 1.6; margin-bottom: 1rem; font-style: italic; }
+
+  .auth-testimonial-author { display: flex; align-items: center; gap: 0.6rem; }
+
+  .auth-testimonial-avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #fff;
+    font-family: var(--font-display);
+  }
+
+  .auth-testimonial-name { font-size: 0.78rem; font-weight: 600; color: var(--text); }
+  .auth-testimonial-role { font-size: 0.7rem; color: var(--muted); }
+
+  /* ── Right panel ── */
+  .auth-right {
+    flex: 0 0 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  @media (min-width: 1024px) { .auth-right { flex: 0 0 500px; } }
+
+  .auth-mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    text-decoration: none;
+  }
+
+  @media (min-width: 1024px) { .auth-mobile-brand { display: none; } }
+
+  .auth-mobile-brand span {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .auth-mobile-brand span i { color: var(--accent); }
+
+  .auth-mobile-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: adot 2s ease-in-out infinite;
+  }
+
+  /* Form card */
+  .auth-card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  }
+
+  .auth-card-header { margin-bottom: 1.75rem; }
+
+  .auth-card-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 0.5rem;
+  }
+
+  .auth-card-title {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: var(--text);
+    margin-bottom: 0.3rem;
+  }
+
+  .auth-card-sub { font-size: 0.85rem; color: var(--muted); }
+
+  /* Flash messages */
+  .auth-flash {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.7rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid;
+    font-size: 0.82rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .auth-flash-danger  { background: rgba(239,68,68,0.08);  border-color: rgba(239,68,68,0.25);  color: #f87171; }
+  .auth-flash-success { background: rgba(34,197,94,0.08);  border-color: rgba(34,197,94,0.25);  color: #4ade80; }
+  .auth-flash-info    { background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.25); color: #60a5fa; }
+
+  /* Form */
+  .auth-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
+  }
+
+  .auth-form-group { margin-bottom: 1rem; }
+
+  .auth-label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text2);
+    margin-bottom: 0.45rem;
+    letter-spacing: 0.02em;
+  }
+
+  .auth-input-wrap { position: relative; }
+
+  .auth-input-icon {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 1rem;
+    pointer-events: none;
+    transition: color 0.2s;
+  }
+
+  .auth-input {
+    display: block;
+    width: 100%;
+    padding: 0.65rem 0.85rem 0.65rem 2.5rem;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .auth-input::placeholder { color: var(--muted); }
+
+  .auth-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+  }
+
+  .auth-input-wrap:focus-within .auth-input-icon { color: var(--accent); }
+
+  /* Password strength bar */
+  .pass-strength { margin-top: 0.4rem; }
+
+  .pass-strength-bar {
+    height: 3px;
+    border-radius: 2px;
+    background: var(--border);
+    overflow: hidden;
+    margin-bottom: 0.25rem;
+  }
+
+  .pass-strength-fill {
+    height: 100%;
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.3s ease, background 0.3s ease;
+  }
+
+  .pass-strength-label { font-size: 0.68rem; color: var(--muted); }
+
+  /* Password toggle */
+  .auth-pass-toggle {
+    position: absolute;
+    right: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0;
+    transition: color 0.2s;
+  }
+
+  .auth-pass-toggle:hover { color: var(--text2); }
+
+  /* Terms checkbox */
+  .auth-terms {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+    cursor: pointer;
+    line-height: 1.5;
+  }
+
+  .auth-terms input[type="checkbox"] {
+    width: 14px; height: 14px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    margin-top: 0.1rem;
+    flex-shrink: 0;
+  }
+
+  .auth-terms a { color: var(--accent2); text-decoration: none; }
+  .auth-terms a:hover { color: var(--accent); }
+
+  /* Submit */
+  .auth-submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.72rem 1.5rem;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 24px rgba(59,130,246,0.3);
+    letter-spacing: 0.01em;
+  }
+
+  .auth-submit:hover {
+    background: var(--accent2);
+    box-shadow: 0 0 36px rgba(59,130,246,0.45);
+    transform: translateY(-1px);
+  }
+
+  .auth-submit:active { transform: translateY(0); }
+
+  /* Footer link */
+  .auth-footer-link {
+    text-align: center;
+    font-size: 0.83rem;
+    color: var(--muted);
+    margin-top: 1.5rem;
+  }
+
+  .auth-footer-link a { color: var(--accent2); text-decoration: none; font-weight: 600; transition: color 0.2s; }
+  .auth-footer-link a:hover { color: var(--accent); }
+
+  /* Free badge */
+  .auth-free-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(34,197,94,0.1);
+    border: 1px solid rgba(34,197,94,0.25);
+    color: #4ade80;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+
+  .auth-free-badge .dot { width: 5px; height: 5px; border-radius: 50%; background: #4ade80; }
+
+{% endblock %}
+
+
+{% block app_shell %}
+
+  <div class="auth-page">
+    <div class="auth-orb auth-orb-1"></div>
+    <div class="auth-orb auth-orb-2"></div>
+    <div class="auth-grid"></div>
+
+    <!-- LEFT PANEL -->
+    <div class="auth-left">
+      <a href="{{ url_for('landing') }}" class="auth-brand">
+        <span class="auth-brand-dot"></span>
+        <span class="auth-brand-name">aire<span>port</span>lab</span>
+      </a>
+
+      <h1 class="auth-left-title">
+        Start turning files into<br/>
+        <span class="grad">insights today</span>
+      </h1>
+
+      <p class="auth-left-sub">
+        Join analysts, data teams, and researchers using aireportlab
+        to automate their entire document analysis workflow.
+      </p>
+
+      <div class="auth-steps">
+        <div class="auth-step">
+          <div class="auth-step-num">01</div>
+          <div class="auth-step-text">
+            <h5>Create your free account</h5>
+            <p>No credit card required. Up and running in under a minute.</p>
+          </div>
+        </div>
+        <div class="auth-step">
+          <div class="auth-step-num">02</div>
+          <div class="auth-step-text">
+            <h5>Upload any file</h5>
+            <p>CSV, Excel, PDF, DOCX, JSON, or TXT — we handle all formats.</p>
+          </div>
+        </div>
+        <div class="auth-step">
+          <div class="auth-step-num">03</div>
+          <div class="auth-step-text">
+            <h5>Get instant AI reports</h5>
+            <p>Visualizations, anomalies, and summaries in under 30 seconds.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="auth-testimonial">
+        <p class="auth-testimonial-text">
+          "aireportlab cut our reporting time by 80%. What used to take hours
+          now takes seconds — and the insights are actually better."
+        </p>
+        <div class="auth-testimonial-author">
+          <div class="auth-testimonial-avatar">AK</div>
+          <div>
+            <div class="auth-testimonial-name">Arjun K.</div>
+            <div class="auth-testimonial-role">Data Analyst, Fintech</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="auth-right">
+
+      <!-- Mobile brand -->
+      <a href="{{ url_for('landing') }}" class="auth-mobile-brand">
+        <span class="auth-mobile-dot"></span>
+        <span>aire<i>port</i>lab</span>
+      </a>
+
+      <div class="auth-card">
+
+        <div class="auth-card-header">
+          <div class="auth-free-badge"><span class="dot"></span> Free forever</div>
+          <div class="auth-card-title">Create account</div>
+          <div class="auth-card-sub">Start analyzing your documents in seconds</div>
+        </div>
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="auth-flash auth-flash-{{ category }}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" autocomplete="on">
+
+          <div class="auth-form-group">
+            <label class="auth-label" for="username">Username</label>
+            <div class="auth-input-wrap">
+              <input
+                class="auth-input"
+                type="text"
+                id="username"
+                name="username"
+                placeholder="yourname"
+                autocomplete="username"
+                required
+              />
+              <i class="bx bx-user auth-input-icon"></i>
+            </div>
+          </div>
+
+          <div class="auth-form-group">
+            <label class="auth-label" for="email">Email address</label>
+            <div class="auth-input-wrap">
+              <input
+                class="auth-input"
+                type="email"
+                id="email"
+                name="email"
+                placeholder="you@example.com"
+                autocomplete="email"
+                required
+              />
+              <i class="bx bx-envelope auth-input-icon"></i>
+            </div>
+          </div>
+
+          <div class="auth-form-group">
+            <label class="auth-label" for="password">Password</label>
+            <div class="auth-input-wrap">
+              <input
+                class="auth-input"
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Min. 8 characters"
+                autocomplete="new-password"
+                required
+                oninput="checkStrength(this.value)"
+              />
+              <i class="bx bx-lock-alt auth-input-icon"></i>
+              <button type="button" class="auth-pass-toggle" onclick="togglePass('password', this)" tabindex="-1">
+                <i class="bx bx-hide"></i>
+              </button>
+            </div>
+            <div class="pass-strength">
+              <div class="pass-strength-bar">
+                <div class="pass-strength-fill" id="strength-fill"></div>
+              </div>
+              <span class="pass-strength-label" id="strength-label"></span>
+            </div>
+          </div>
+
+          <label class="auth-terms">
+            <input type="checkbox" name="terms" required />
+            I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
+          </label>
+
+          <button type="submit" class="auth-submit">
+            <i class="bx bx-rocket"></i>
+            Create Free Account
+          </button>
+
+        </form>
+
+        <div class="auth-footer-link">
+          Already have an account? <a href="{{ url_for('login') }}">Sign in →</a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function togglePass(id, btn) {
+      const inp = document.getElementById(id);
+      const icon = btn.querySelector('i');
+      if (inp.type === 'password') {
+        inp.type = 'text';
+        icon.className = 'bx bx-show';
+      } else {
+        inp.type = 'password';
+        icon.className = 'bx bx-hide';
+      }
+    }
+
+    function checkStrength(val) {
+      const fill  = document.getElementById('strength-fill');
+      const label = document.getElementById('strength-label');
+      let score = 0;
+      if (val.length >= 8)                    score++;
+      if (/[A-Z]/.test(val))                  score++;
+      if (/[0-9]/.test(val))                  score++;
+      if (/[^A-Za-z0-9]/.test(val))           score++;
+
+      const levels = [
+        { pct: '0%',   color: '',          text: '' },
+        { pct: '25%',  color: '#ef4444',   text: 'Weak' },
+        { pct: '50%',  color: '#f59e0b',   text: 'Fair' },
+        { pct: '75%',  color: '#60a5fa',   text: 'Good' },
+        { pct: '100%', color: '#22c55e',   text: 'Strong' },
+      ];
+
+      const level = levels[score] || levels[0];
+      fill.style.width      = level.pct;
+      fill.style.background = level.color;
+      label.textContent     = level.text;
+      label.style.color     = level.color;
+    }
+  </script>
+
+{% endblock app_shell %}

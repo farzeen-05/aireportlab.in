@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}History{% endblock %}
+{% block breadcrumb_current %}History{% endblock %}
+
+{% block body %}
+
+<div class="page-header flex-between">
+  <div>
+    <h1 class="page-title">Upload History</h1>
+    <p class="page-subtitle">All your analyzed files and generated reports.</p>
+  </div>
+  <a href="{{ url_for('upload') }}" class="btn btn-primary">
+    <i class="bx bx-upload"></i> Upload New
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">All Files</span>
+    <span class="badge badge-muted">{{ records|length }} total</span>
+  </div>
+  <div class="card-body" style="padding:0;">
+    {% if records %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>File Name</th>
+            <th>Type</th>
+            <th>Upload Date</th>
+            <th>Insights Preview</th>
+            <th style="text-align:center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in records %}
+          <tr>
+            <td class="text-muted text-sm">{{ records|length - loop.index0 }}</td>
+            <td class="fw-mid truncate" style="max-width:200px;">{{ row.file_name or '—' }}</td>
+            <td>
+              <span class="badge badge-blue">{{ (row.file_type or 'N/A') | upper }}</span>
+            </td>
+            <td class="text-muted text-sm">{{ row.upload_date or '—' }}</td>
+            <td class="text-muted text-sm truncate" style="max-width:220px;">
+              {# ✅ None-safe — all columns that may be NULL #}
+              {% if row.insights %}
+                {{ row.insights[:80] }}{% if row.insights|length > 80 %}...{% endif %}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td style="text-align:center;">
+              <div style="display:flex;justify-content:center;gap:0.4rem;">
+                <a href="{{ url_for('view_report', report_id=row.id) }}" class="btn btn-outline btn-sm">
+                  <i class="bx bx-show"></i> View
+                </a>
+                {% if row.pdf_report %}
+                <a href="{{ url_for('download_report', report_id=row.id) }}" class="btn btn-primary btn-sm">
+                  <i class="bx bx-download"></i> PDF
+                </a>
+                {% else %}
+                <span class="badge badge-muted" style="align-self:center;">No PDF</span>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="bx bx-history"></i>
+      <p>No upload history found. Upload a file to get started.</p>
+      <a href="{{ url_for('upload') }}" class="btn btn-primary btn-sm mt-1">Upload File</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
