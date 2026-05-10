@@ -543,35 +543,104 @@ def view_report(report_id):
 def download_report(report_id):
 
     conn = get_db_connection()
+
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT pdf_report
+
+        SELECT
+            pdf_report,
+            file_name
+
         FROM upload_history
+
         WHERE id = ?
+
     """, (report_id,))
 
     report = cursor.fetchone()
 
     cursor.close()
+
     conn.close()
 
-    if not report or not report["pdf_report"]:
+    if (
+        not report
+        or not report["pdf_report"]
+    ):
 
-        flash("Report file not found.", "danger")
+        flash(
+            "Report file not found.",
+            "danger"
+        )
 
-        return redirect(url_for('history'))
+        return redirect(
+            url_for('history')
+        )
 
-    directory = os.path.dirname(report["pdf_report"])
+    pdf_data = report["pdf_report"]
 
-    filename = os.path.basename(report["pdf_report"])
+    file_name = (
 
-    return send_from_directory(
-        directory,
-        filename,
-        as_attachment=True
+        report["file_name"].rsplit(".", 1)[0]
+
+        if report["file_name"]
+
+        else "report"
+
     )
 
+    filename = f"{file_name}_report.pdf"
+
+    # ─── If PDF stored as bytes ───────────────────────────────
+
+    if isinstance(
+        pdf_data,
+        (bytes, bytearray)
+    ):
+
+        from flask import Response
+
+        return Response(
+
+            bytes(pdf_data),
+
+            mimetype="application/pdf",
+
+            headers={
+
+                "Content-Disposition":
+                f"attachment; filename={filename}"
+
+            }
+
+        )
+
+    # ─── If PDF stored as path ────────────────────────────────
+
+    if (
+        isinstance(pdf_data, str)
+        and os.path.exists(pdf_data)
+    ):
+
+        return send_from_directory(
+
+            os.path.dirname(pdf_data),
+
+            os.path.basename(pdf_data),
+
+            as_attachment=True
+
+        )
+
+    flash(
+        "PDF file missing.",
+        "danger"
+    )
+
+    return redirect(
+        url_for('history')
+    )
 
 # ─── Settings ─────────────────────────────────────────────────────────────────
 
