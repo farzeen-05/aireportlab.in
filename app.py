@@ -248,7 +248,7 @@ def upload():
                 flash("Could not read the file. Please check the format.", "danger")
                 return redirect(request.url)
 
-            if time.time() - start_time > 90:
+            if time.time() - start_time > 25:
                 flash("File processing timed out. Please upload a smaller file.", "danger")
                 return redirect(request.url)
 
