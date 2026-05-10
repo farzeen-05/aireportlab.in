@@ -500,7 +500,8 @@ def download_report(report_id):
     conn   = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
-        "SELECT pdf_report FROM upload_history WHERE id = %s", (report_id,)
+        "SELECT pdf_report, file_name FROM upload_history WHERE id = %s",
+        (report_id,)
     )
     report = cursor.fetchone()
     cursor.close()
@@ -510,11 +511,32 @@ def download_report(report_id):
         flash("Report file not found.", "danger")
         return redirect(url_for('history'))
 
-    directory = os.path.dirname(report["pdf_report"])
-    filename  = os.path.basename(report["pdf_report"])
-    return send_from_directory(directory, filename, as_attachment=True)
+    pdf_data  = report["pdf_report"]
+    file_name = report.get("file_name", "report").rsplit(".", 1)[0]
+    filename  = f"{file_name}_report.pdf"
 
+    # ── New format: bytes stored in DB ────────────────────────────────────────
+    if isinstance(pdf_data, (bytes, bytearray)):
+        from flask import Response
+        return Response(
+            bytes(pdf_data),
+            mimetype="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Type": "application/pdf"
+            }
+        )
 
+    # ── Legacy format: file path string (local only) ──────────────────────────
+    if isinstance(pdf_data, str) and os.path.exists(pdf_data):
+        return send_from_directory(
+            os.path.dirname(pdf_data),
+            os.path.basename(pdf_data),
+            as_attachment=True
+        )
+
+    flash("Report file not found.", "danger")
+    return redirect(url_for('history'))
 # ─── Settings ─────────────────────────────────────────────────────────────────
 
 @app.route('/settings', methods=['GET', 'POST'])
