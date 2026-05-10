@@ -1,15 +1,37 @@
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Image
+)
+from reportlab.lib.styles import (
+    getSampleStyleSheet,
+    ParagraphStyle
+)
 from reportlab.lib.units import inch
+
 import os
+import time
 
 
-def export_pdf_report(final_report, file_type, report_title, chart_path=None, structured_breakdown=None):
+def export_pdf_report(
+    final_report,
+    file_type,
+    report_title,
+    chart_path=None,
+    structured_breakdown=None
+):
+
     os.makedirs("static/reports", exist_ok=True)
 
-    file_path = "static/reports/final_report.pdf"
+    unique_name = f"{int(time.time())}_{report_title}.pdf"
+
+    file_path = os.path.join(
+        "static/reports",
+        unique_name
+    )
 
     doc = SimpleDocTemplate(
         file_path,
@@ -22,7 +44,6 @@ def export_pdf_report(final_report, file_type, report_title, chart_path=None, st
 
     styles = getSampleStyleSheet()
 
-    # Custom styles
     title_style = ParagraphStyle(
         "CustomTitle",
         parent=styles["Title"],
@@ -41,16 +62,6 @@ def export_pdf_report(final_report, file_type, report_title, chart_path=None, st
         spaceBefore=12,
         spaceAfter=10,
         textColor=colors.HexColor("#1F3C88")
-    )
-
-    subheading_style = ParagraphStyle(
-        "SubHeading",
-        parent=styles["Heading3"],
-        fontSize=11,
-        leading=14,
-        spaceBefore=8,
-        spaceAfter=6,
-        textColor=colors.HexColor("#333333")
     )
 
     body_style = ParagraphStyle(
@@ -73,68 +84,152 @@ def export_pdf_report(final_report, file_type, report_title, chart_path=None, st
     story = []
 
     # Title
-    story.append(Paragraph(f"{report_title} Analysis Report", title_style))
-    story.append(Paragraph("AI-powered intelligent document insights and analysis", footer_style))
+    story.append(
+        Paragraph(
+            f"{report_title} Analysis Report",
+            title_style
+        )
+    )
+
+    story.append(
+        Paragraph(
+            "AI-powered intelligent document insights and analysis",
+            footer_style
+        )
+    )
+
     story.append(Spacer(1, 20))
 
     # Executive Summary
     if final_report.get("executive_summary"):
-        story.append(Paragraph("Executive Summary", section_style))
-        story.append(Paragraph(final_report["executive_summary"], body_style))
-        story.append(Spacer(1, 12))
+
+        story.append(
+            Paragraph(
+                "Executive Summary",
+                section_style
+            )
+        )
+
+        story.append(
+            Paragraph(
+                final_report["executive_summary"],
+                body_style
+            )
+        )
 
     # Key Insights
     if final_report.get("key_insights"):
-        story.append(Paragraph("Key Insights", section_style))
-        for point in final_report["key_insights"]:
-            story.append(Paragraph(f"• {point}", body_style))
-        story.append(Spacer(1, 12))
 
-    # Visual Dashboard
-    if chart_path:
-        story.append(Paragraph("Visual Dashboard", section_style))
-        story.append(Spacer(1, 8))
+        story.append(
+            Paragraph(
+                "Key Insights",
+                section_style
+            )
+        )
+
+        for point in final_report["key_insights"]:
+
+            story.append(
+                Paragraph(
+                    f"• {point}",
+                    body_style
+                )
+            )
+
+    # Charts
+    if chart_path and isinstance(chart_path, dict):
+
+        story.append(
+            Paragraph(
+                "Visual Dashboard",
+                section_style
+            )
+        )
 
         for chart_name, chart_file in chart_path.items():
+
             if os.path.exists(chart_file):
-                story.append(Paragraph(f"{chart_name.title()} Chart", subheading_style))
-                story.append(Image(chart_file, width=6.2 * inch, height=3.2 * inch))
-                story.append(Spacer(1, 14))
+
+                try:
+
+                    story.append(
+                        Paragraph(
+                            chart_name,
+                            body_style
+                        )
+                    )
+
+                    story.append(
+                        Image(
+                            chart_file,
+                            width=6 * inch,
+                            height=3 * inch
+                        )
+                    )
+
+                    story.append(Spacer(1, 12))
+
+                except:
+                    pass
 
     # Recommendations
     if final_report.get("recommendations"):
-        story.append(Paragraph("Recommendations", section_style))
-        for item in final_report["recommendations"]:
-            story.append(Paragraph(f"• {item}", body_style))
+
+        story.append(
+            Paragraph(
+                "Recommendations",
+                section_style
+            )
+        )
+
+        for rec in final_report["recommendations"]:
+
+            story.append(
+                Paragraph(
+                    f"• {rec}",
+                    body_style
+                )
+            )
 
     # Structured Breakdown
     if structured_breakdown:
-        if file_type in ['csv', 'excel','json_tabular']:
-            story.append(Spacer(1, 12))
-            story.append(Paragraph("Column-wise Summary", section_style))
 
-            for item in structured_breakdown:
-                text = (
-                    f"<b>{item['column']}</b> ({item['type']}) — "
-                    f"Missing: {item['missing_percent']}%, "
-                    f"Unique: {item['unique_values']}<br/>"
-                    f"{item['summary']}"
+        story.append(
+            Paragraph(
+                "Detailed Breakdown",
+                section_style
+            )
+        )
+
+        for item in structured_breakdown:
+
+            if isinstance(item, dict):
+
+                text = item.get(
+                    "summary",
+                    str(item)
                 )
-                story.append(Paragraph(text, body_style))
+
+                story.append(
+                    Paragraph(
+                        text,
+                        body_style
+                    )
+                )
+
                 story.append(Spacer(1, 8))
 
-        elif file_type in ['pdf', 'docx','json_text','txt']:
-            story.append(Spacer(1, 12))
-            story.append(Paragraph("Page-wise Summary", section_style))
+    story.append(Spacer(1, 20))
 
-            for item in structured_breakdown:
-                text = f"<b>Page {item['page']}</b><br/>{item['summary']}"
-                story.append(Paragraph(text, body_style))
-                story.append(Spacer(1, 8))
-                
-        story.append(Spacer(1, 20))
-        story.append(Paragraph("Generated by aireportlab", footer_style))
+    story.append(
+        Paragraph(
+            "Generated by aireportlab",
+            footer_style
+        )
+    )
 
-        doc.build(story)
+    # BUILD PDF
+    doc.build(story)
 
-        return file_path
+    # RETURN FILE PATH
+    return file_path
