@@ -2,6 +2,9 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from utils.file_reader import extract_file_content
 from utils.preprocess import preprocess_content
 from utils.insights import generate_insights
+from utils.ml_model import run_ml_analysis
+from utils.nlp_model import run_nlp_analysis
+from utils.dl_model import run_dl_analysis
 from utils.db import (save_upload_history, get_upload_history,
                       check_existing_upload, save_user_settings, get_user_settings,
                       save_reset_token, get_user_by_reset_token, update_user_password)
@@ -14,14 +17,11 @@ from utils.export_report import export_pdf_report
 from utils.document_classifier import detect_document_type
 from utils.research_parser import extract_research_sections, clean_section_text
 from visualization_engine import VisualizationEngine
-import mysql.connector
 import pandas as pd
-import matplotlib.pyplot as plt
 import time
 import os
 import io
 import json
-import gc
 import secrets
 import smtplib
 from email.mime.text import MIMEText
@@ -35,23 +35,11 @@ app.secret_key = '9945'
 TABULAR_TYPES = ['csv', 'excel', 'json_tabular']
 TEXT_TYPES    = ['pdf', 'docx', 'txt', 'json_text']
 
-# ─── Memory limits ────────────────────────────────────────────────────────────
-MAX_ROWS_FOR_CHARTS = 5000   # sample large datasets
-MAX_COLS_FOR_CHARTS = 20     # max columns to chart
-MAX_FILE_SIZE_FOR_ML = 200 * 1024   # skip ML/DL for files > 200KB
-
 # ─── Mail config ──────────────────────────────────────────────────────────────
 MAIL_USERNAME = "farzeen99453@gmail.com"
 MAIL_PASSWORD = "farz83"
 
-# ─── DB connection ────────────────────────────────────────────────────────────
-def get_db_connection():
-    return mysql.connector.connect(
-        host=os.environ.get("DB_HOST", "localhost"),
-        user=os.environ.get("DB_USER", "root"),
-        password=os.environ.get("DB_PASSWORD", ""),
-        database=os.environ.get("DB_NAME", "dataset_db")
-    )
+
 
 # ─── Auth decorator ───────────────────────────────────────────────────────────
 def login_required(f):
@@ -86,7 +74,6 @@ def _read_dataframe(file):
 def _run_visualization_engine(file_type, processed, file_obj=None):
     """
     Runs VisualizationEngine for tabular types.
-    Memory-safe: samples large datasets, limits columns, frees memory after.
     Returns dict {label: filepath} or None.
     """
     if file_type not in TABULAR_TYPES:
@@ -99,26 +86,21 @@ def _run_visualization_engine(file_type, processed, file_obj=None):
     if df is None or (hasattr(df, "empty") and df.empty):
         return None
 
-    # ── Memory safety: limit size before passing to engine ────────────────────
-    if len(df) > MAX_ROWS_FOR_CHARTS:
-        df = df.sample(MAX_ROWS_FOR_CHARTS, random_state=42)
-    if len(df.columns) > MAX_COLS_FOR_CHARTS:
-        df = df.iloc[:, :MAX_COLS_FOR_CHARTS]
-
     try:
         engine = VisualizationEngine(output_dir="static/charts")
-        result = engine.run(df)
-        return result
+        return engine.run(df)
     except Exception as e:
         app.logger.warning(f"VisualizationEngine failed: {e}", exc_info=True)
         return None
-    finally:
-        # Always free matplotlib memory after chart generation
-        plt.close('all')
-        gc.collect()
 
 
 def _parse_chart_paths(raw):
+    """
+    Convert DB-stored chart_data back into a dict the template can iterate.
+      JSON string → dict  (new format)
+      plain string → {"chart": path}  (legacy)
+      None → None
+    """
     if not raw:
         return None
     if isinstance(raw, dict):
@@ -133,6 +115,7 @@ def _parse_chart_paths(raw):
 
 
 def _to_list(value, sep=" || "):
+    """Safely convert DB value → list. Works for list, string, or None."""
     if not value:
         return []
     if isinstance(value, list):
@@ -143,6 +126,7 @@ def _to_list(value, sep=" || "):
 
 
 def _serialize_breakdown(structured_breakdown, file_type):
+    """Serialize structured_breakdown list → single DB string."""
     if not structured_breakdown:
         return None
     rows = []
@@ -200,17 +184,24 @@ def landing():
 @app.route('/index')
 @login_required
 def index():
-    records       = get_upload_history(session['user_id'])
+
+    records = get_upload_history(session['user_id'])
+
     total_uploads = len(records)
-    total_reports = len([r for r in records if r.get("pdf_report")])
+
+    total_reports = len([
+        r for r in records
+        if r["pdf_report"]
+    ])
+
     recent_uploads = records[:5]
+
     return render_template(
         'index.html',
         total_uploads=total_uploads,
         total_reports=total_reports,
         recent_uploads=recent_uploads
     )
-
 
 # ─── Upload ───────────────────────────────────────────────────────────────────
 
@@ -228,7 +219,7 @@ def upload():
         file_ext = file.filename.rsplit('.', 1)[-1].lower()
 
         if file_ext not in allowed_extensions:
-            flash("Unsupported file format.", "danger")
+            flash("Unsupported file format. Please upload CSV, Excel, PDF, DOCX, JSON, or TXT files only.", "danger")
             return redirect(request.url)
 
         file.seek(0, os.SEEK_END)
@@ -257,6 +248,10 @@ def upload():
                 flash("Could not read the file. Please check the format.", "danger")
                 return redirect(request.url)
 
+            if time.time() - start_time > 25:
+                flash("File processing timed out. Please upload a smaller file.", "danger")
+                return redirect(request.url)
+
             # ── Preprocess ────────────────────────────────────────────────────
             processed            = preprocess_content(file_type, extracted)
             structured_breakdown = generate_structured_breakdown(file_type, processed)
@@ -271,11 +266,6 @@ def upload():
 
             if file_type in TEXT_TYPES and not processed.get("cleaned_text", "").strip():
                 flash("The uploaded document contains no readable text.", "warning")
-                return redirect(request.url)
-
-            # ── Timeout check ─────────────────────────────────────────────────
-            if time.time() - start_time > 25:
-                flash("Processing timed out. Please try a smaller file.", "danger")
                 return redirect(request.url)
 
             # ── Settings & document type ──────────────────────────────────────
@@ -296,12 +286,7 @@ def upload():
             # ── Visualizations (tabular only) ─────────────────────────────────
             chart_paths = None
             if not settings_data or settings_data.get("visual_charts") == "Enabled":
-                chart_paths = _run_visualization_engine(
-                    file_type, processed, file_obj=file
-                )
-            # Force memory cleanup after chart generation
-            plt.close('all')
-            gc.collect()
+                chart_paths = _run_visualization_engine(file_type, processed, file_obj=file)
 
             # Single representative path for PDF export
             if isinstance(chart_paths, dict) and chart_paths:
@@ -312,24 +297,10 @@ def upload():
             else:
                 chart_path = None
 
-            # ── ML / NLP / DL — skip for large files to save memory ───────────
-            ml_output  = None
-            nlp_output = None
-            dl_output  = None
-
-            if file_size <= MAX_FILE_SIZE_FOR_ML:
-                if file_type in TABULAR_TYPES:
-                    from utils.ml_model import run_ml_analysis
-                    ml_output = run_ml_analysis(file_type, processed)
-                    gc.collect()
-
-                if file_type in TEXT_TYPES:
-                    from utils.nlp_model import run_nlp_analysis
-                    from utils.dl_model import run_dl_analysis
-                    nlp_output = run_nlp_analysis(file_type, processed, document_type)
-                    dl_output  = run_dl_analysis(file_type, processed,
-                                                  document_type, research_sections)
-                    gc.collect()
+            # ── ML / NLP / DL ─────────────────────────────────────────────────
+            ml_output  = run_ml_analysis(file_type, processed) if file_type in TABULAR_TYPES else None
+            nlp_output = run_nlp_analysis(file_type, processed, document_type) if file_type in TEXT_TYPES else None
+            dl_output  = run_dl_analysis(file_type, processed, document_type, research_sections) if file_type in TEXT_TYPES else None
 
             # ── Final report ──────────────────────────────────────────────────
             final_report = generate_final_report(
@@ -364,7 +335,6 @@ def upload():
                 chart_paths if isinstance(chart_paths, dict) else {},
                 structured_breakdown
             )
-            gc.collect()
 
             # ── Save to DB ────────────────────────────────────────────────────
             report_id = save_upload_history(
@@ -401,8 +371,6 @@ def upload():
             )
 
         except Exception as e:
-            plt.close('all')
-            gc.collect()
             app.logger.error(f"Upload processing failed: {str(e)}", exc_info=True)
             flash(f"Upload failed: {str(e)}", "danger")
             return redirect(request.url)
@@ -417,30 +385,54 @@ def serve_chart(filename):
     return send_from_directory('static/charts', filename)
 
 
+# ─── Report placeholder ───────────────────────────────────────────────────────
+
 # ─── History ──────────────────────────────────────────────────────────────────
 
 @app.route('/history')
 @login_required
 def history():
+
     q = request.args.get('q', '').strip()
-    conn   = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
     if q:
+
         cursor.execute("""
             SELECT * FROM upload_history
-            WHERE user_id = %s
-              AND (file_name LIKE %s OR file_type LIKE %s OR insights LIKE %s)
+            WHERE user_id = ?
+            AND (
+                file_name LIKE ?
+                OR file_type LIKE ?
+                OR insights LIKE ?
+            )
             ORDER BY id DESC
-        """, (session['user_id'], f"%{q}%", f"%{q}%", f"%{q}%"))
+        """, (
+            session['user_id'],
+            f"%{q}%",
+            f"%{q}%",
+            f"%{q}%"
+        ))
+
     else:
+
         cursor.execute("""
             SELECT * FROM upload_history
-            WHERE user_id = %s ORDER BY id DESC
+            WHERE user_id = ?
+            ORDER BY id DESC
         """, (session['user_id'],))
+
     records = cursor.fetchall()
+
     cursor.close()
     conn.close()
-    return render_template('history.html', records=records)
+
+    return render_template(
+        'history.html',
+        records=records
+    )
 
 
 # ─── View report ──────────────────────────────────────────────────────────────
@@ -448,40 +440,90 @@ def history():
 @app.route('/view-report/<int:report_id>')
 @login_required
 def view_report(report_id):
-    conn   = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
     cursor.execute("""
-        SELECT id, file_name, file_type, upload_date,
-               insights, key_insights, recommendations, chart_data,
-               ml_result, nlp_result, dl_result, structured_breakdown, pdf_report
-        FROM upload_history WHERE id = %s
+        SELECT
+            id,
+            file_name,
+            file_type,
+            upload_date,
+            insights,
+            key_insights,
+            recommendations,
+            chart_data,
+            ml_result,
+            nlp_result,
+            dl_result,
+            structured_breakdown,
+            pdf_report
+
+        FROM upload_history
+        WHERE id = ?
     """, (report_id,))
+
     report = cursor.fetchone()
+
     cursor.close()
     conn.close()
 
     if not report:
+
         flash("Report not found.", "danger")
+
         return redirect(url_for('history'))
 
-    chart_paths = _parse_chart_paths(report.get("chart_data"))
-    chart_path  = (
-        chart_paths.get("dataset_overview", next(iter(chart_paths.values())))
-        if isinstance(chart_paths, dict) and chart_paths else None
-    )
+    chart_paths = {}
+    chart_path = None
 
-    report["key_insights"]    = _to_list(report.get("key_insights"))
-    report["recommendations"] = _to_list(report.get("recommendations"))
+    if report["chart_data"]:
+
+        try:
+
+            chart_paths = json.loads(report["chart_data"])
+
+            if chart_paths:
+                chart_path = next(iter(chart_paths.values()))
+
+        except:
+            chart_paths = {}
+            chart_path = None
+
+    key_insights = []
+
+    if report["key_insights"]:
+
+        if isinstance(report["key_insights"], str):
+
+            try:
+                key_insights = json.loads(report["key_insights"])
+            except:
+                key_insights = [report["key_insights"]]
+
+    recommendations = []
+
+    if report["recommendations"]:
+
+        if isinstance(report["recommendations"], str):
+
+            try:
+                recommendations = json.loads(report["recommendations"])
+            except:
+                recommendations = [report["recommendations"]]
 
     structured_breakdown = []
-    raw_sb = report.get("structured_breakdown")
-    if isinstance(raw_sb, list):
-        structured_breakdown = [{"summary": i} for i in raw_sb]
-    elif isinstance(raw_sb, str) and raw_sb.strip():
-        structured_breakdown = [
-            {"summary": i.strip()}
-            for i in raw_sb.split(" || ") if i.strip()
-        ]
+
+    if report["structured_breakdown"]:
+
+        if isinstance(report["structured_breakdown"], str):
+
+            structured_breakdown = [
+                {"summary": item.strip()}
+                for item in report["structured_breakdown"].split("||")
+                if item.strip()
+            ]
 
     return render_template(
         'view_report.html',
@@ -489,6 +531,8 @@ def view_report(report_id):
         chart_paths=chart_paths,
         chart_path=chart_path,
         structured_breakdown=structured_breakdown,
+        key_insights=key_insights,
+        recommendations=recommendations
     )
 
 
@@ -497,155 +541,333 @@ def view_report(report_id):
 @app.route('/download-report/<int:report_id>')
 @login_required
 def download_report(report_id):
-    conn   = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute(
-        "SELECT pdf_report, file_name FROM upload_history WHERE id = %s",
-        (report_id,)
-    )
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT pdf_report
+        FROM upload_history
+        WHERE id = ?
+    """, (report_id,))
+
     report = cursor.fetchone()
+
     cursor.close()
     conn.close()
 
     if not report or not report["pdf_report"]:
+
         flash("Report file not found.", "danger")
+
         return redirect(url_for('history'))
 
-    pdf_data  = report["pdf_report"]
-    file_name = report.get("file_name", "report").rsplit(".", 1)[0]
-    filename  = f"{file_name}_report.pdf"
+    directory = os.path.dirname(report["pdf_report"])
 
-    # ── New format: bytes stored in DB ────────────────────────────────────────
-    if isinstance(pdf_data, (bytes, bytearray)):
-        from flask import Response
-        return Response(
-            bytes(pdf_data),
-            mimetype="application/pdf",
-            headers={
-                "Content-Disposition": f"attachment; filename={filename}",
-                "Content-Type": "application/pdf"
-            }
-        )
+    filename = os.path.basename(report["pdf_report"])
 
-    # ── Legacy format: file path string (local only) ──────────────────────────
-    if isinstance(pdf_data, str) and os.path.exists(pdf_data):
-        return send_from_directory(
-            os.path.dirname(pdf_data),
-            os.path.basename(pdf_data),
-            as_attachment=True
-        )
+    return send_from_directory(
+        directory,
+        filename,
+        as_attachment=True
+    )
 
-    flash("Report file not found.", "danger")
-    return redirect(url_for('history'))
+
 # ─── Settings ─────────────────────────────────────────────────────────────────
 
 @app.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
+
     if request.method == 'POST':
+
         analysis_type = request.form.get('analysis_type')
-        report_format = ",".join(request.form.getlist('report_format'))
+
+        report_format = ",".join(
+            request.form.getlist('report_format')
+        )
+
         visual_charts = request.form.get('visual_charts')
-        save_user_settings(analysis_type, report_format, visual_charts)
-        flash("Settings saved successfully.", "success")
+
+        save_user_settings(
+            analysis_type,
+            report_format,
+            visual_charts
+        )
+
+        flash(
+            "Settings saved successfully.",
+            "success"
+        )
+
         return redirect(url_for('settings'))
+
     settings_data = get_user_settings()
-    return render_template('settings.html', settings_data=settings_data)
+
+    return render_template(
+        'settings.html',
+        settings_data=settings_data
+    )
 
 
-# ─── Auth ─────────────────────────────────────────────────────────────────────
+# ─── Register ─────────────────────────────────────────────────────────────────
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+
     if request.method == 'POST':
+
         username = request.form['username']
-        email    = request.form['email']
-        password = generate_password_hash(request.form['password'])
-        conn   = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-        if cursor.fetchone():
-            flash("Email already registered", "danger")
-            cursor.close(); conn.close()
-            return redirect(url_for('register'))
-        cursor.execute(
-            "INSERT INTO users (username, email, password) VALUES (%s, %s, %s)",
-            (username, email, password)
+
+        email = request.form['email']
+
+        password = generate_password_hash(
+            request.form['password']
         )
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT *
+            FROM users
+            WHERE email = ?
+        """, (email,))
+
+        existing_user = cursor.fetchone()
+
+        if existing_user:
+
+            flash(
+                "Email already registered",
+                "danger"
+            )
+
+            cursor.close()
+            conn.close()
+
+            return redirect(url_for('register'))
+
+        cursor.execute("""
+            INSERT INTO users
+            (username, email, password)
+
+            VALUES (?, ?, ?)
+        """, (
+            username,
+            email,
+            password
+        ))
+
         conn.commit()
-        cursor.close(); conn.close()
-        flash("Registration successful. Please login.", "success")
+
+        cursor.close()
+        conn.close()
+
+        flash(
+            "Registration successful. Please login.",
+            "success"
+        )
+
         return redirect(url_for('login'))
+
     return render_template('register.html')
 
 
+# ─── Login ────────────────────────────────────────────────────────────────────
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+
     if request.method == 'POST':
-        email    = request.form['email']
+
+        email = request.form['email']
+
         password = request.form['password']
-        conn   = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT *
+            FROM users
+            WHERE email = ?
+        """, (email,))
+
         user = cursor.fetchone()
-        cursor.close(); conn.close()
-        if user and check_password_hash(user['password'], password):
-            session['user_id']  = user['id']
+
+        cursor.close()
+        conn.close()
+
+        if user and check_password_hash(
+            user['password'],
+            password
+        ):
+
+            session['user_id'] = user['id']
             session['username'] = user['username']
-            flash("Login successful", "success")
+
+            flash(
+                "Login successful",
+                "success"
+            )
+
             return redirect(url_for('index'))
-        flash("Invalid email or password", "danger")
+
+        flash(
+            "Invalid email or password",
+            "danger"
+        )
+
         return redirect(url_for('login'))
+
     return render_template('login.html')
 
 
+# ─── Logout ───────────────────────────────────────────────────────────────────
+
 @app.route('/logout')
 def logout():
+
     session.clear()
-    flash("Logged out successfully", "success")
+
+    flash(
+        "Logged out successfully",
+        "success"
+    )
+
     return redirect(url_for('login'))
 
 
-# ─── Password reset ───────────────────────────────────────────────────────────
+# ─── Password Reset ───────────────────────────────────────────────────────────
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
+
     if request.method == 'POST':
-        email  = request.form.get('email', '').strip().lower()
-        token  = secrets.token_urlsafe(32)
+
+        email = request.form.get(
+            'email',
+            ''
+        ).strip().lower()
+
+        token = secrets.token_urlsafe(32)
+
         expiry = datetime.now() + timedelta(hours=1)
-        found  = save_reset_token(email, token, expiry)
+
+        found = save_reset_token(
+            email,
+            token,
+            expiry
+        )
+
         if found:
-            link = url_for('reset_password', token=token, _external=True)
+
+            link = url_for(
+                'reset_password',
+                token=token,
+                _external=True
+            )
+
             try:
-                send_reset_email(email, link)
+
+                send_reset_email(
+                    email,
+                    link
+                )
+
             except Exception as e:
-                app.logger.error(f"Email error: {e}")
-                flash("Could not send email. Check mail config.", "danger")
-                return render_template('auth-forgot-password-basic.html')
-        return redirect(url_for('forgot_password') + '?sent=1')
-    return render_template('auth-forgot-password-basic.html')
+
+                app.logger.error(
+                    f"Email error: {e}"
+                )
+
+                flash(
+                    "Could not send email.",
+                    "danger"
+                )
+
+                return render_template(
+                    'auth-forgot-password-basic.html'
+                )
+
+        return redirect(
+            url_for('forgot_password') + '?sent=1'
+        )
+
+    return render_template(
+        'auth-forgot-password-basic.html'
+    )
 
 
 @app.route('/reset-password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
+
     user = get_user_by_reset_token(token)
+
     if not user:
-        flash("Reset link expired or invalid.", "danger")
-        return redirect(url_for('forgot_password'))
+
+        flash(
+            "Reset link expired or invalid.",
+            "danger"
+        )
+
+        return redirect(
+            url_for('forgot_password')
+        )
+
     if request.method == 'POST':
-        password = request.form.get('password', '')
-        confirm  = request.form.get('confirm_password', '')
+
+        password = request.form.get(
+            'password',
+            ''
+        )
+
+        confirm = request.form.get(
+            'confirm_password',
+            ''
+        )
+
         if len(password) < 8:
-            flash("Password must be at least 8 characters.", "danger")
-            return render_template('reset-password.html', token=token)
+
+            flash(
+                "Password must be at least 8 characters.",
+                "danger"
+            )
+
+            return render_template(
+                'reset-password.html',
+                token=token
+            )
+
         if password != confirm:
-            flash("Passwords do not match.", "danger")
-            return render_template('reset-password.html', token=token)
-        update_user_password(user['id'], generate_password_hash(password))
-        flash("Password reset successfully.", "success")
+
+            flash(
+                "Passwords do not match.",
+                "danger"
+            )
+
+            return render_template(
+                'reset-password.html',
+                token=token
+            )
+
+        update_user_password(
+            user['id'],
+            generate_password_hash(password)
+        )
+
+        flash(
+            "Password reset successfully.",
+            "success"
+        )
+
         return redirect(url_for('login'))
-    return render_template('reset-password.html', token=token)
+
+    return render_template(
+        'reset-password.html',
+        token=token
+    )
 
 
 # ─── Run ──────────────────────────────────────────────────────────────────────
