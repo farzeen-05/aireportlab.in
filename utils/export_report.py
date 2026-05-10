@@ -1,40 +1,28 @@
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
-from reportlab.platypus import (
-    SimpleDocTemplate,
-    Paragraph,
-    Spacer,
-    Image
-)
-from reportlab.lib.styles import (
-    getSampleStyleSheet,
-    ParagraphStyle
-)
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-
+import io
 import os
-import time
 
 
 def export_pdf_report(
     final_report,
     file_type,
     report_title,
-    chart_path=None,
+    chart_paths=None,
     structured_breakdown=None
 ):
+    """
+    Builds the PDF entirely in memory and returns raw bytes.
+    Nothing is written to disk — safe for Render / ephemeral filesystems.
+    """
 
-    os.makedirs("static/reports", exist_ok=True)
-
-    unique_name = f"{int(time.time())}_{report_title}.pdf"
-
-    file_path = os.path.join(
-        "static/reports",
-        unique_name
-    )
+    buffer = io.BytesIO()
 
     doc = SimpleDocTemplate(
-        file_path,
+        buffer,
         pagesize=A4,
         rightMargin=40,
         leftMargin=40,
@@ -47,189 +35,85 @@ def export_pdf_report(
     title_style = ParagraphStyle(
         "CustomTitle",
         parent=styles["Title"],
-        fontSize=22,
-        leading=28,
-        spaceAfter=20,
+        fontSize=22, leading=28, spaceAfter=20,
         textColor=colors.HexColor("#1F3C88"),
         alignment=1
     )
-
     section_style = ParagraphStyle(
         "SectionHeading",
         parent=styles["Heading2"],
-        fontSize=15,
-        leading=20,
-        spaceBefore=12,
-        spaceAfter=10,
+        fontSize=15, leading=20, spaceBefore=12, spaceAfter=10,
         textColor=colors.HexColor("#1F3C88")
     )
-
     body_style = ParagraphStyle(
         "CustomBody",
         parent=styles["BodyText"],
-        fontSize=10,
-        leading=15,
-        spaceAfter=8
+        fontSize=10, leading=15, spaceAfter=8
     )
-
     footer_style = ParagraphStyle(
         "Footer",
         parent=styles["BodyText"],
-        fontSize=8,
-        leading=10,
-        alignment=1,
+        fontSize=8, leading=10, alignment=1,
         textColor=colors.grey
     )
 
     story = []
 
-    # Title
-    story.append(
-        Paragraph(
-            f"{report_title} Analysis Report",
-            title_style
-        )
-    )
-
-    story.append(
-        Paragraph(
-            "AI-powered intelligent document insights and analysis",
-            footer_style
-        )
-    )
-
+    # ── Title ─────────────────────────────────────────────────────────────────
+    story.append(Paragraph(f"{report_title} Analysis Report", title_style))
+    story.append(Paragraph(
+        "AI-powered intelligent document insights and analysis", footer_style
+    ))
     story.append(Spacer(1, 20))
 
-    # Executive Summary
+    # ── Executive Summary ─────────────────────────────────────────────────────
     if final_report.get("executive_summary"):
+        story.append(Paragraph("Executive Summary", section_style))
+        story.append(Paragraph(final_report["executive_summary"], body_style))
+        story.append(Spacer(1, 8))
 
-        story.append(
-            Paragraph(
-                "Executive Summary",
-                section_style
-            )
-        )
-
-        story.append(
-            Paragraph(
-                final_report["executive_summary"],
-                body_style
-            )
-        )
-
-    # Key Insights
+    # ── Key Insights ──────────────────────────────────────────────────────────
     if final_report.get("key_insights"):
-
-        story.append(
-            Paragraph(
-                "Key Insights",
-                section_style
-            )
-        )
-
+        story.append(Paragraph("Key Insights", section_style))
         for point in final_report["key_insights"]:
+            story.append(Paragraph(f"• {point}", body_style))
+        story.append(Spacer(1, 8))
 
-            story.append(
-                Paragraph(
-                    f"• {point}",
-                    body_style
-                )
-            )
-
-    # Charts
-    if chart_path and isinstance(chart_path, dict):
-
-        story.append(
-            Paragraph(
-                "Visual Dashboard",
-                section_style
-            )
-        )
-
-        for chart_name, chart_file in chart_path.items():
-
-            if os.path.exists(chart_file):
-
+    # ── Visual Dashboard (charts saved on disk) ───────────────────────────────
+    if chart_paths and isinstance(chart_paths, dict):
+        story.append(Paragraph("Visual Dashboard", section_style))
+        for chart_name, chart_file in chart_paths.items():
+            if chart_file and os.path.exists(chart_file):
                 try:
-
-                    story.append(
-                        Paragraph(
-                            chart_name,
-                            body_style
-                        )
-                    )
-
-                    story.append(
-                        Image(
-                            chart_file,
-                            width=6 * inch,
-                            height=3 * inch
-                        )
-                    )
-
+                    story.append(Paragraph(
+                        chart_name.replace("_", " ").title(), body_style
+                    ))
+                    story.append(Image(chart_file, width=6*inch, height=3*inch))
                     story.append(Spacer(1, 12))
+                except Exception:
+                    pass   # skip broken charts silently
 
-                except:
-                    pass
-
-    # Recommendations
+    # ── Recommendations ───────────────────────────────────────────────────────
     if final_report.get("recommendations"):
-
-        story.append(
-            Paragraph(
-                "Recommendations",
-                section_style
-            )
-        )
-
+        story.append(Paragraph("Recommendations", section_style))
         for rec in final_report["recommendations"]:
+            story.append(Paragraph(f"• {rec}", body_style))
+        story.append(Spacer(1, 8))
 
-            story.append(
-                Paragraph(
-                    f"• {rec}",
-                    body_style
-                )
-            )
-
-    # Structured Breakdown
+    # ── Structured Breakdown ──────────────────────────────────────────────────
     if structured_breakdown:
-
-        story.append(
-            Paragraph(
-                "Detailed Breakdown",
-                section_style
-            )
-        )
-
+        story.append(Paragraph("Detailed Breakdown", section_style))
         for item in structured_breakdown:
+            text = item.get("summary", str(item)) if isinstance(item, dict) else str(item)
+            story.append(Paragraph(text, body_style))
+            story.append(Spacer(1, 6))
 
-            if isinstance(item, dict):
-
-                text = item.get(
-                    "summary",
-                    str(item)
-                )
-
-                story.append(
-                    Paragraph(
-                        text,
-                        body_style
-                    )
-                )
-
-                story.append(Spacer(1, 8))
-
+    # ── Footer ────────────────────────────────────────────────────────────────
     story.append(Spacer(1, 20))
+    story.append(Paragraph("Generated by aireportlab", footer_style))
 
-    story.append(
-        Paragraph(
-            "Generated by aireportlab",
-            footer_style
-        )
-    )
-
-    # BUILD PDF
+    # ── Build into buffer ─────────────────────────────────────────────────────
     doc.build(story)
 
-    # RETURN FILE PATH
-    return file_path
+    # Return raw bytes — caller stores in DB as LONGBLOB
+    return buffer.getvalue()
