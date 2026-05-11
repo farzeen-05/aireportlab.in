@@ -14,11 +14,6 @@ def export_pdf_report(
     chart_paths=None,
     structured_breakdown=None
 ):
-    """
-    Builds the PDF entirely in memory and returns raw bytes.
-    Nothing is written to disk — safe for Render / ephemeral filesystems.
-    """
-
     buffer = io.BytesIO()
 
     doc = SimpleDocTemplate(
@@ -59,81 +54,70 @@ def export_pdf_report(
 
     story = []
 
-    # ── Title ─────────────────────────────────────────────────────────────────
+    # ── Title ──────────────────────────────────────────────────────────────
     story.append(Paragraph(f"{report_title} Analysis Report", title_style))
-    story.append(Paragraph(
-        "AI-powered intelligent document insights and analysis", footer_style
-    ))
+    story.append(Paragraph("AI-powered intelligent document insights and analysis", footer_style))
     story.append(Spacer(1, 20))
 
-    # ── Executive Summary ─────────────────────────────────────────────────────
+    # ── Executive Summary ──────────────────────────────────────────────────
     if final_report.get("executive_summary"):
         story.append(Paragraph("Executive Summary", section_style))
         story.append(Paragraph(final_report["executive_summary"], body_style))
         story.append(Spacer(1, 8))
 
-    # ── Key Insights ──────────────────────────────────────────────────────────
+    # ── Key Insights ───────────────────────────────────────────────────────
     if final_report.get("key_insights"):
         story.append(Paragraph("Key Insights", section_style))
         for point in final_report["key_insights"]:
             story.append(Paragraph(f"• {point}", body_style))
         story.append(Spacer(1, 8))
 
-    # ── Visual Dashboard (charts saved on disk) ───────────────────────────────
+    # ── Visual Dashboard ───────────────────────────────────────────────────
     if chart_paths and isinstance(chart_paths, dict):
         story.append(Paragraph("Visual Dashboard", section_style))
         for chart_name, chart_file in chart_paths.items():
             if chart_file and os.path.exists(chart_file):
                 try:
-                    story.append(Paragraph(
-                        chart_name.replace("_", " ").title(), body_style
-                    ))
+                    story.append(Paragraph(chart_name.replace("_", " ").title(), body_style))
                     story.append(Image(chart_file, width=6*inch, height=3*inch))
                     story.append(Spacer(1, 12))
                 except Exception:
-                    pass   # skip broken charts silently
+                    pass
 
-    # ── Recommendations ───────────────────────────────────────────────────────
+    # ── Recommendations ────────────────────────────────────────────────────
     if final_report.get("recommendations"):
         story.append(Paragraph("Recommendations", section_style))
         for rec in final_report["recommendations"]:
             story.append(Paragraph(f"• {rec}", body_style))
         story.append(Spacer(1, 8))
-    # In export_pdf_report — fix the Detailed Breakdown section:
 
-if structured_breakdown:
-    story.append(Paragraph("Detailed Breakdown", section_style))
-
-    for item in structured_breakdown:
-        if isinstance(item, dict):
-            # ── Tabular: show column name + type + summary ────────────────
-            if "column" in item:
-                text = (
-                    f"<b>{item['column']}</b> ({item.get('type', '')}): "
-                    f"Missing: {item.get('missing_percent', 0)}% · "
-                    f"Unique: {item.get('unique_values', 0)} · "
-                    f"{item.get('summary', '')}"
-                )
-            # ── Text/page: show page number + summary ─────────────────────
-            elif "page" in item:
-                text = f"<b>Page {item['page']}:</b> {item.get('summary', '')}"
-            # ── Fallback ──────────────────────────────────────────────────
+    # ── Detailed Breakdown ─────────────────────────────────────────────────
+    if structured_breakdown:                                    # ← now indented inside the function
+        story.append(Paragraph("Detailed Breakdown", section_style))
+        for item in structured_breakdown:
+            if isinstance(item, dict):
+                if "column" in item:
+                    text = (
+                        f"<b>{item['column']}</b> ({item.get('type', '')}): "
+                        f"Missing: {item.get('missing_percent', 0)}% · "
+                        f"Unique: {item.get('unique_values', 0)} · "
+                        f"{item.get('summary', '')}"
+                    )
+                elif "page" in item:
+                    text = f"<b>Page {item['page']}:</b> {item.get('summary', '')}"
+                else:
+                    text = item.get("summary", str(item))
             else:
-                text = item.get("summary", str(item))
-        else:
-            text = str(item)
+                text = str(item)
 
-        # Skip empty or "Dataset Overview" garbage values
-        if text and text.strip() and text.strip() != "Dataset Overview":
-            story.append(Paragraph(text, body_style))
-            story.append(Spacer(1, 6))
+            if text and text.strip():
+                story.append(Paragraph(text, body_style))
+                story.append(Spacer(1, 6))
 
-    # ── Footer ────────────────────────────────────────────────────────────────
+    # ── Footer ─────────────────────────────────────────────────────────────
     story.append(Spacer(1, 20))
     story.append(Paragraph("Generated by aireportlab", footer_style))
 
-    # ── Build into buffer ─────────────────────────────────────────────────────
+    # ── Build ──────────────────────────────────────────────────────────────
     doc.build(story)
-
-    # Return raw bytes — caller stores in DB as LONGBLOB
-    return buffer.getvalue()
+    return buffer.getvalue()                                    # ← inside the function
