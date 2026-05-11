@@ -176,9 +176,17 @@ def send_reset_email(to_email, reset_link):
     </div>
     """
     msg.attach(MIMEText(html, "html"))
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+
+    app.logger.info(f"Attempting SMTP to {to_email} via port 587...")
+
+    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
         server.login(MAIL_USERNAME, MAIL_PASSWORD)
         server.sendmail(MAIL_USERNAME, to_email, msg.as_string())
+
+    app.logger.info("SMTP send complete.")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
