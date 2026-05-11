@@ -29,7 +29,7 @@ import resend
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "9945")
-resend.app_key = os.environ.get("RESEND_APP_KEY")
+resend.api_key = os.environ.get("RESEND_API_KEY")
 
 oauth = OAuth(app)
 google = oauth.register(
