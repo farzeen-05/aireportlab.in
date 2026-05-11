@@ -23,9 +23,6 @@ import os
 import io
 import json
 import secrets
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from authlib.integrations.flask_client import OAuth
 import resend
@@ -63,28 +60,37 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+import resend
+
+resend.api_key = os.environ.get("RESEND_API_KEY")
+
 def send_reset_email(to_email, reset_link):
-    resend.Emails.send({
-        "from": "aireportlab <onboarding@resend.dev>",
-        "to": to_email,
-        "subject": "Reset your aireportlab password",
-        "html": f"""
-        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;
-                    background:#0c1120;padding:2rem;border-radius:12px;">
-          <h2 style="color:#e8eeff;">Reset your password</h2>
-          <p style="color:#6b7fa8;">Click below — link expires in 1 hour.</p>
-          <a href="{reset_link}"
-             style="display:inline-block;margin:1.5rem 0;padding:0.7rem 1.5rem;
-                    background:#3b82f6;color:#fff;border-radius:8px;
-                    text-decoration:none;font-weight:600;">
-            Reset Password
-          </a>
-          <p style="color:#6b7fa8;font-size:0.8rem;">
-            Didn't request this? Ignore this email.
-          </p>
-        </div>
-        """
-    })
+    try:
+        resend.Emails.send({
+            "from": "aireportlab <onboarding@resend.dev>",
+            "to": to_email,
+            "subject": "Reset your aireportlab password",
+            "html": f"""
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;
+                        background:#0c1120;padding:2rem;border-radius:12px;">
+              <h2 style="color:#e8eeff;">Reset your password</h2>
+              <p style="color:#6b7fa8;">Click below — link expires in 1 hour.</p>
+              <a href="{reset_link}"
+                 style="display:inline-block;margin:1.5rem 0;padding:0.7rem 1.5rem;
+                        background:#3b82f6;color:#fff;border-radius:8px;
+                        text-decoration:none;font-weight:600;">
+                Reset Password
+              </a>
+              <p style="color:#6b7fa8;font-size:0.8rem;">
+                Didn't request this? Ignore this email.
+              </p>
+            </div>
+            """
+        })
+        app.logger.info(f"✅ Email sent to {to_email}")
+    except Exception as e:
+        app.logger.error(f"❌ Email failed: {e}")
+        raise
 # ─── Chart helpers ────────────────────────────────────────────────────────────
 
 def _read_dataframe(file):
@@ -176,27 +182,7 @@ def _serialize_breakdown(structured_breakdown, file_type):
     return " || ".join(rows)
 
 
-# ─── Mail helper ──────────────────────────────────────────────────────────────
-def send_reset_email(to_email, reset_link):
-    try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = "Reset your aireportlab password"
-        msg["From"]    = f"aireportlab <{MAIL_USERNAME}>"
-        msg["To"]      = to_email
-        html = f"""..."""
-        msg.attach(MIMEText(html, "html"))
 
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.ehlo()
-            server.starttls()
-            server.login(MAIL_USERNAME, MAIL_PASSWORD)
-            server.sendmail(MAIL_USERNAME, to_email, msg.as_string())
-
-        app.logger.info(f"Email sent to {to_email}")
-
-    except Exception as e:
-        app.logger.error(f"SMTP crash: {type(e).__name__}: {e}")
-        raise   # re-raise so forgot_password route can catch it
 
 
 
