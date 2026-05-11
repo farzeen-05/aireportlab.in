@@ -166,20 +166,26 @@ def _to_list(value, sep=" || "):
 
 
 def _serialize_breakdown(structured_breakdown, file_type):
-    """Serialize structured_breakdown list → single DB string."""
     if not structured_breakdown:
         return None
     rows = []
     for item in structured_breakdown:
+        if not isinstance(item, dict):
+            continue
         if file_type in TABULAR_TYPES:
+            # Skip if missing required keys
+            if "column" not in item:
+                continue
             rows.append(
                 f"{item['column']} ({item['type']}) - "
                 f"Missing: {item['missing_percent']}%, "
                 f"Unique: {item['unique_values']} - {item['summary']}"
             )
         else:
+            if "page" not in item:
+                continue
             rows.append(f"Page {item['page']} - {item['summary']}")
-    return " || ".join(rows)
+    return " || ".join(rows) if rows else None
 
 
 
