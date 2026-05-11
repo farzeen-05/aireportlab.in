@@ -46,8 +46,8 @@ TABULAR_TYPES = ['csv', 'excel', 'json_tabular']
 TEXT_TYPES    = ['pdf', 'docx', 'txt', 'json_text']
 
 # ─── Mail config ──────────────────────────────────────────────────────────────
-MAIL_USERNAME = "farzeen99453@gmail.com"
-MAIL_PASSWORD = "farz83"
+MAIL_USERNAME = "farz88928@gmail.com"
+MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
 
 
 
