@@ -30,7 +30,7 @@ from datetime import datetime, timedelta
 from authlib.integrations.flask_client import OAuth
 
 app = Flask(__name__)
-app.secret_key = '9945'
+app_secretkey=os.environ.get("app_secretkey","")
 
 oauth = OAuth(app)
 google = oauth.register(
