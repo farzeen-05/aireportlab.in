@@ -28,9 +28,11 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from authlib.integrations.flask_client import OAuth
+import resend
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "9945")
+resend.app_key = os.environ.get("RESEND_APP_KEY")
 
 oauth = OAuth(app)
 google = oauth.register(
@@ -61,6 +63,28 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def send_reset_email(to_email, reset_link):
+    resend.Emails.send({
+        "from": "aireportlab <onboarding@resend.dev>",
+        "to": to_email,
+        "subject": "Reset your aireportlab password",
+        "html": f"""
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;
+                    background:#0c1120;padding:2rem;border-radius:12px;">
+          <h2 style="color:#e8eeff;">Reset your password</h2>
+          <p style="color:#6b7fa8;">Click below — link expires in 1 hour.</p>
+          <a href="{reset_link}"
+             style="display:inline-block;margin:1.5rem 0;padding:0.7rem 1.5rem;
+                    background:#3b82f6;color:#fff;border-radius:8px;
+                    text-decoration:none;font-weight:600;">
+            Reset Password
+          </a>
+          <p style="color:#6b7fa8;font-size:0.8rem;">
+            Didn't request this? Ignore this email.
+          </p>
+        </div>
+        """
+    })
 # ─── Chart helpers ────────────────────────────────────────────────────────────
 
 def _read_dataframe(file):
