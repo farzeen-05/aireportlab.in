@@ -972,23 +972,23 @@ def google_callback():
             return redirect(url_for('login'))
 
         conn   = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
         user = cursor.fetchone()
 
         if not user:
             cursor.execute(
-                "INSERT INTO users (username, email, password) VALUES (%s, %s, %s)",
+                "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
                 (name, email, generate_password_hash(os.urandom(32).hex()))
             )
             conn.commit()
-            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+            cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
             user = cursor.fetchone()
 
         cursor.close()
         conn.close()
 
-        session['user_id']  = user['id']
+        session['user_id']  = user['id']        # ← works because of row_factory
         session['username'] = user['username']
         session['avatar']   = picture
 
@@ -999,7 +999,6 @@ def google_callback():
         app.logger.error(f"Google OAuth error: {e}", exc_info=True)
         flash("Google login failed. Please try again.", "danger")
         return redirect(url_for('login'))
-
 # ─── Run ──────────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
