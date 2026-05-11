@@ -27,9 +27,19 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
+from authlib.integrations.flask_client import OAuth
 
 app = Flask(__name__)
 app.secret_key = '9945'
+
+oauth = OAuth(app)
+google = oauth.register(
+    name='google',
+    client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+    client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'},
+)
 
 # ─── File type groups ─────────────────────────────────────────────────────────
 TABULAR_TYPES = ['csv', 'excel', 'json_tabular']
@@ -937,7 +947,58 @@ def reset_password(token):
         'reset-password.html',
         token=token
     )
+@app.route('/auth/google')
+def google_login():
+    redirect_uri = url_for('google_callback', _external=True)
+    return google.authorize_redirect(redirect_uri)
 
+
+@app.route('/auth/google/callback')
+def google_callback():
+    try:
+        token     = google.authorize_access_token()
+        user_info = token.get('userinfo')
+
+        if not user_info:
+            flash("Google login failed. Please try again.", "danger")
+            return redirect(url_for('login'))
+
+        email   = user_info.get('email', '').strip().lower()
+        name    = user_info.get('name', email.split('@')[0])
+        picture = user_info.get('picture', '')
+
+        if not email:
+            flash("Could not get email from Google.", "danger")
+            return redirect(url_for('login'))
+
+        conn   = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+
+        if not user:
+            cursor.execute(
+                "INSERT INTO users (username, email, password) VALUES (%s, %s, %s)",
+                (name, email, generate_password_hash(os.urandom(32).hex()))
+            )
+            conn.commit()
+            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+            user = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        session['user_id']  = user['id']
+        session['username'] = user['username']
+        session['avatar']   = picture
+
+        flash(f"Welcome, {user['username']}!", "success")
+        return redirect(url_for('index'))
+
+    except Exception as e:
+        app.logger.error(f"Google OAuth error: {e}", exc_info=True)
+        flash("Google login failed. Please try again.", "danger")
+        return redirect(url_for('login'))
 
 # ─── Run ──────────────────────────────────────────────────────────────────────
 
