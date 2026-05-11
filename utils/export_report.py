@@ -99,17 +99,33 @@ def export_pdf_report(
         for rec in final_report["recommendations"]:
             story.append(Paragraph(f"• {rec}", body_style))
         story.append(Spacer(1, 8))
+    # In export_pdf_report — fix the Detailed Breakdown section:
 
-    # ── Structured Breakdown ──────────────────────────────────────────────────
-    if structured_breakdown:
-        story.append(Paragraph("Detailed Breakdown", section_style))
-        for item in structured_breakdown:
+if structured_breakdown:
+    story.append(Paragraph("Detailed Breakdown", section_style))
+
+    for item in structured_breakdown:
+        if isinstance(item, dict):
+            # ── Tabular: show column name + type + summary ────────────────
             if "column" in item:
-                text = f"{item['column']} ({item['type']}): {item['summary']}"
+                text = (
+                    f"<b>{item['column']}</b> ({item.get('type', '')}): "
+                    f"Missing: {item.get('missing_percent', 0)}% · "
+                    f"Unique: {item.get('unique_values', 0)} · "
+                    f"{item.get('summary', '')}"
+                )
+            # ── Text/page: show page number + summary ─────────────────────
+            elif "page" in item:
+                text = f"<b>Page {item['page']}:</b> {item.get('summary', '')}"
+            # ── Fallback ──────────────────────────────────────────────────
             else:
                 text = item.get("summary", str(item))
-            clean_name = chart_name.replace("_", " ").title()
-            story.append(Paragraph(clean_name, body_style))
+        else:
+            text = str(item)
+
+        # Skip empty or "Dataset Overview" garbage values
+        if text and text.strip() and text.strip() != "Dataset Overview":
+            story.append(Paragraph(text, body_style))
             story.append(Spacer(1, 6))
 
     # ── Footer ────────────────────────────────────────────────────────────────
