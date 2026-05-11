@@ -46,3 +46,4 @@ xlrd==2.0.2
 gunicorn==25.3.0
 authlib
 requests
+resend
