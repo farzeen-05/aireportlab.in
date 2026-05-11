@@ -822,61 +822,28 @@ def logout():
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
-
     if request.method == 'POST':
-
-        email = request.form.get(
-            'email',
-            ''
-        ).strip().lower()
-
-        token = secrets.token_urlsafe(32)
-
+        email  = request.form.get('email', '').strip().lower()
+        token  = secrets.token_urlsafe(32)
         expiry = datetime.now() + timedelta(hours=1)
-
-        found = save_reset_token(
-            email,
-            token,
-            expiry
-        )
+        found  = save_reset_token(email, token, expiry)
 
         if found:
-
-            link = url_for(
-                'reset_password',
-                token=token,
-                _external=True
-            )
-
+            link = url_for('reset_password', token=token, _external=True)
             try:
-
-                send_reset_email(
-                    email,
-                    link
-                )
-
+                send_reset_email(email, link)
+                app.logger.info(f"✅ Reset email sent to {email}")
             except Exception as e:
+                # ← Log the FULL error so we can see it in Render logs
+                app.logger.error(f"❌ SMTP FAILED: {type(e).__name__}: {e}")
+                flash(f"Email failed to send: {str(e)}", "danger")
+                return render_template('auth-forgot-password-basic.html')
+        else:
+            app.logger.warning(f"⚠️ Email not found in DB: {email}")
 
-                app.logger.error(
-                    f"Email error: {e}"
-                )
+        return redirect(url_for('forgot_password') + '?sent=1')
 
-                flash(
-                    "Could not send email.",
-                    "danger"
-                )
-
-                return render_template(
-                    'auth-forgot-password-basic.html'
-                )
-
-        return redirect(
-            url_for('forgot_password') + '?sent=1'
-        )
-
-    return render_template(
-        'auth-forgot-password-basic.html'
-    )
+    return render_template('auth-forgot-password-basic.html')
 
 
 @app.route('/reset-password/<token>', methods=['GET', 'POST'])
