@@ -104,8 +104,12 @@ def export_pdf_report(
     if structured_breakdown:
         story.append(Paragraph("Detailed Breakdown", section_style))
         for item in structured_breakdown:
-            text = item.get("summary", str(item)) if isinstance(item, dict) else str(item)
-            story.append(Paragraph(text, body_style))
+            if "column" in item:
+                text = f"{item['column']} ({item['type']}): {item['summary']}"
+            else:
+                text = item.get("summary", str(item))
+            clean_name = chart_name.replace("_", " ").title()
+            story.append(Paragraph(clean_name, body_style))
             story.append(Spacer(1, 6))
 
     # ── Footer ────────────────────────────────────────────────────────────────
