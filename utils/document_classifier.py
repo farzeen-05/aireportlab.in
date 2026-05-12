@@ -1,64 +1,74 @@
-import re
-
-
 def detect_document_type(file_type, processed):
     """
-    Detects the type of uploaded document so the correct
-    summarization strategy can be applied.
+    Detects document type for any PDF/DOCX/TXT.
+    Returns a specific domain string used by insights generator.
     """
+    if file_type not in ['pdf', 'docx', 'txt', 'json_text']:
+        return "tabular"
 
-    # Tabular types — no text classification needed
-    if file_type in ['csv', 'excel', 'json_tabular']:
-        return "generic"
-
-    # TXT — lightweight classification
-    if file_type == 'txt':
-        return _classify_text(processed)
-
-    # JSON text (flattened key:value content)
-    if file_type == 'json_text':
-        return _classify_text(processed)
-
-    # PDF / DOCX — full classification
-    if file_type in ['pdf', 'docx']:
-        return _classify_text(processed)
-
-    return "generic"
-
-
-def _classify_text(processed):
     text = processed.get("cleaned_text", "").lower()
 
-    if not text:
-        return "generic"
+    domains = {
+        "academic":    ["module", "semester", "professor", "lecture", "syllabus",
+                        "chapter", "unit", "exam", "assignment", "marks", "grade",
+                        "course", "curriculum", "tutorial", "practicum", "viva"],
 
-    research_signals = [
-        "abstract", "introduction", "methodology", "literature review",
-        "results", "discussion", "conclusion", "references",
-        "proposed system", "experimental procedure"
-    ]
-    resume_signals = [
-        "education", "skills", "experience", "projects",
-        "certifications", "internship", "profile", "objective"
-    ]
-    business_signals = [
-        "revenue", "sales", "profit", "market", "growth",
-        "performance", "customer", "quarter", "forecast"
-    ]
-    legal_signals = [
-        "agreement", "party", "terms", "conditions", "liability",
-        "compliance", "policy", "contract", "obligation"
-    ]
+        "security":    ["security", "attack", "network", "virus", "malware",
+                        "firewall", "encryption", "vulnerability", "threat",
+                        "intrusion", "authentication", "cryptography", "hacking"],
 
-    def score(signals):
-        return sum(1 for word in signals if word in text)
+        "medical":     ["patient", "disease", "treatment", "diagnosis", "hospital",
+                        "clinical", "symptoms", "medication", "surgery", "therapy",
+                        "prescription", "pathology", "anatomy", "physiology"],
 
-    scores = {
-        "research_paper":  score(research_signals),
-        "resume":          score(resume_signals),
-        "business_report": score(business_signals),
-        "legal_document":  score(legal_signals)
+        "legal":       ["clause", "agreement", "jurisdiction", "liability",
+                        "contract", "plaintiff", "defendant", "judgment", "statute",
+                        "regulation", "compliance", "attorney", "legal", "court"],
+
+        "financial":   ["revenue", "profit", "balance", "investment", "fiscal",
+                        "budget", "expense", "income", "assets", "liabilities",
+                        "cashflow", "equity", "dividend", "audit", "financial"],
+
+        "research":    ["abstract", "methodology", "conclusion", "references",
+                        "hypothesis", "literature", "findings", "analysis",
+                        "experiment", "results", "discussion", "citation"],
+
+        "business":    ["company", "market", "strategy", "customer", "product",
+                        "sales", "revenue", "growth", "operations", "management",
+                        "stakeholder", "enterprise", "corporate", "business"],
+
+        "technology":  ["software", "hardware", "algorithm", "database", "api",
+                        "programming", "system", "architecture", "cloud", "server",
+                        "code", "development", "deployment", "framework"],
+
+        "hr":          ["employee", "recruitment", "salary", "performance",
+                        "appraisal", "leave", "policy", "payroll", "benefits",
+                        "onboarding", "training", "workforce", "hiring"],
+
+        "government":  ["government", "policy", "ministry", "regulation", "act",
+                        "parliament", "citizen", "public", "scheme", "authority",
+                        "municipal", "gazette", "ordinance", "constitution"],
+
+        "news":        ["according", "reported", "announced", "breaking", "sources",
+                        "official", "press", "media", "journalist", "article",
+                        "editorial", "coverage", "statement", "spokesperson"],
+
+        "invoice":     ["invoice", "bill", "payment", "due", "amount", "gst",
+                        "total", "subtotal", "tax", "vendor", "purchaser",
+                        "quantity", "rate", "discount", "receipt"],
+
+        "resume":      ["experience", "education", "skills", "objective",
+                        "qualification", "internship", "project", "achievement",
+                        "certification", "reference", "career", "profile"],
+
+        "manual":      ["instructions", "steps", "procedure", "guide", "manual",
+                        "how to", "setup", "install", "configure", "troubleshoot",
+                        "warning", "caution", "note", "operation"],
     }
 
-    best_match = max(scores, key=scores.get)
-    return best_match if scores[best_match] > 0 else "generic"
+    scores = {}
+    for domain, keywords in domains.items():
+        scores[domain] = sum(1 for kw in keywords if kw in text)
+
+    best = max(scores, key=scores.get)
+    return best if scores[best] > 0 else "general"
