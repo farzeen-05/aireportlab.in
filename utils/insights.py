@@ -45,25 +45,57 @@ def generate_tabular_insights(processed):
     return insight
 
 
-def generate_text_insights(processed):
-    summary = processed["summary"]
+def generate_insights(file_type, processed):
+    if file_type in ['pdf', 'docx', 'txt', 'json_text']:
+        text    = processed.get("cleaned_text", "")
+        pages   = processed.get("raw_pages", [])
+        words   = text.split()
 
-    total_words = summary["total_words"]
-    filtered_words = summary["filtered_words"]
+        # Count sentences
+        import re
+        sentences = re.split(r'[.!?]', text)
+        sentences = [s.strip() for s in sentences if len(s.strip()) > 30]
 
-    insight = (
-        f"The uploaded document contains approximately {total_words} total words, of which {filtered_words} meaningful terms remain after preprocessing. "
-    )
+        # Extract top bigrams (2-word phrases)
+        from collections import Counter
+        bigrams = []
+        for i in range(len(words)-1):
+            if len(words[i]) > 3 and len(words[i+1]) > 3:
+                bigrams.append(f"{words[i]} {words[i+1]}")
+        top_bigrams = [b for b, _ in Counter(bigrams).most_common(5)]
 
-    if total_words > 1000:
-        insight += "This is a content-rich document suitable for deeper semantic and thematic analysis. "
-    elif total_words > 300:
-        insight += "This document contains sufficient textual content for reliable keyword and contextual interpretation. "
-    else:
-        insight += "This is a shorter document suitable for lightweight text summarization and keyword extraction. "
+        # Get heading-like lines from pages
+        headings = []
+        for page in pages:
+            lines = page.split('\n')
+            for line in lines:
+                line = line.strip()
+                if (10 < len(line) < 80 and
+                    not line.endswith('.') and
+                    sum(1 for c in line if c.isupper()) > 3):
+                    headings.append(line)
+        headings = list(dict.fromkeys(headings))[:5]
 
-    insight += (
-        "The content has been normalized, cleaned, and prepared for semantic analysis, keyword extraction, and automated summarization."
-    )
-
-    return insight
+        return {
+            "executive_summary": (
+                f"This document spans {len(pages)} pages with approximately "
+                f"{len(words):,} words and {len(sentences)} key statements. "
+                f"Core topics identified include: {', '.join(top_bigrams)}. "
+                f"The content is structured around {len(headings)} major sections "
+                f"and is suitable for academic or professional review."
+            ),
+            "key_insights": [
+                f"Document contains {len(pages)} pages and {len(words):,} words.",
+                f"Key topics: {', '.join(top_bigrams[:3])}." if top_bigrams else "",
+                f"Major sections identified: {', '.join(headings[:3])}." if headings else "",
+                f"Average section length: {len(words) // max(len(pages), 1)} words per page.",
+                "Content suitable for summarization, keyword extraction and topic modeling.",
+            ],
+            "recommendations": [
+                f"Focus on sections covering {top_bigrams[0]} for core understanding." if top_bigrams else "",
+                "Use extracted keywords as a study guide or search index.",
+                "Review page summaries to quickly navigate the document.",
+                "Cross-reference with related documents for deeper analysis.",
+            ]
+        }
+    
