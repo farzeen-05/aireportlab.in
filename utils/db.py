@@ -31,7 +31,7 @@ def save_reset_token(email, token, expiry):
 
     conn = get_db_connection()
 
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
         UPDATE users
@@ -82,7 +82,7 @@ def update_user_password(user_id, hashed_password):
 
     conn = get_db_connection()
 
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
         UPDATE users
@@ -153,7 +153,7 @@ def save_upload_history(
 
     conn = get_db_connection()
 
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
         INSERT INTO upload_history
