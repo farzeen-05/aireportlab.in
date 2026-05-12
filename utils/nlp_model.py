@@ -1,10 +1,40 @@
 from collections import Counter
 
 
-def run_nlp_analysis(file_type, processed, document_type="generic"):
-    if file_type in ['pdf', 'docx', 'txt', 'json_text']:  # ← add txt, json_text
-        return extract_keywords(processed, document_type)
-    return None
+def run_nlp_analysis(file_type, processed, document_type):
+    text = processed.get("cleaned_text", "")
+    raw_pages = processed.get("raw_pages", [])
+
+    # Extract keywords using TF-IDF instead of just frequency
+    from sklearn.feature_extraction.text import TfidfVectorizer
+
+    # Use raw text not cleaned for better context
+    vectorizer = TfidfVectorizer(
+        max_features=20,
+        stop_words='english',
+        ngram_range=(1, 2)   # capture phrases like "network security"
+    )
+    try:
+        tfidf_matrix = vectorizer.fit_transform([text])
+        keywords = vectorizer.get_feature_names_out().tolist()
+    except:
+        keywords = []
+
+    # Extract first meaningful sentence from each page as summary
+    page_summaries = []
+    for page in raw_pages[:5]:
+        sentences = page.split('.')
+        for sent in sentences:
+            sent = sent.strip()
+            if len(sent) > 50 and not sent.isupper():
+                page_summaries.append(sent)
+                break
+
+    return {
+        "keywords": keywords,
+        "page_summaries": page_summaries,
+        "word_count": len(text.split()),
+    }
 
 def extract_keywords(processed, document_type="generic"):
     text = processed["cleaned_text"]
