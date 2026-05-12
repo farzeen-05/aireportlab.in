@@ -26,6 +26,7 @@ import secrets
 from datetime import datetime, timedelta
 from authlib.integrations.flask_client import OAuth
 import resend
+import mysql.connector
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "9945")
@@ -82,7 +83,7 @@ def send_reset_email(to_email, reset_link):
                 Reset Password
               </a>
               <p style="color:#6b7fa8;font-size:0.8rem;">
-                Didn't request this? Ignore this email.
+                Didn't request this%s Ignore this email.
               </p>
             </div>
             """
@@ -417,17 +418,20 @@ def history():
     q = request.args.get('q', '').strip()
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+
+    cursor = conn.cursor(
+        dictionary=True
+    )
 
     if q:
 
         cursor.execute("""
             SELECT * FROM upload_history
-            WHERE user_id = ?
+            WHERE user_id = %s
             AND (
-                file_name LIKE ?
-                OR file_type LIKE ?
-                OR insights LIKE ?
+                file_name LIKE %s
+                OR file_type LIKE %s
+                OR insights LIKE %s
             )
             ORDER BY id DESC
         """, (
@@ -441,20 +445,20 @@ def history():
 
         cursor.execute("""
             SELECT * FROM upload_history
-            WHERE user_id = ?
+            WHERE user_id = %s
             ORDER BY id DESC
         """, (session['user_id'],))
 
     records = cursor.fetchall()
 
     cursor.close()
+
     conn.close()
 
     return render_template(
         'history.html',
         records=records
     )
-
 
 # ─── View report ──────────────────────────────────────────────────────────────
 
@@ -482,7 +486,7 @@ def view_report(report_id):
             pdf_report
 
         FROM upload_history
-        WHERE id = ?
+        WHERE id = %s
     """, (report_id,))
 
     report = cursor.fetchone()
@@ -575,7 +579,7 @@ def download_report(report_id):
 
         FROM upload_history
 
-        WHERE id = ?
+        WHERE id = %s
 
     """, (report_id,))
 
@@ -721,7 +725,7 @@ def register():
         cursor.execute("""
             SELECT *
             FROM users
-            WHERE email = ?
+            WHERE email = %s
         """, (email,))
 
         existing_user = cursor.fetchone()
@@ -742,7 +746,7 @@ def register():
             INSERT INTO users
             (username, email, password)
 
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
         """, (
             username,
             email,
@@ -781,7 +785,7 @@ def login():
         cursor.execute("""
             SELECT *
             FROM users
-            WHERE email = ?
+            WHERE email = %s
         """, (email,))
 
         user = cursor.fetchone()
@@ -852,7 +856,7 @@ def forgot_password():
         else:
             app.logger.warning(f"⚠️ Email not found in DB: {email}")
 
-        return redirect(url_for('forgot_password') + '?sent=1')
+        return redirect(url_for('forgot_password') + '%ssent=1')
 
     return render_template('auth-forgot-password-basic.html')
 
@@ -951,16 +955,16 @@ def google_callback():
 
         conn   = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
 
         if not user:
             cursor.execute(
-                "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
+                "INSERT INTO users (username, email, password) VALUES (%s, %s, %s)",
                 (name, email, generate_password_hash(os.urandom(32).hex()))
             )
             conn.commit()
-            cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
             user = cursor.fetchone()
 
         cursor.close()
