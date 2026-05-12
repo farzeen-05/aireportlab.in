@@ -1,14 +1,26 @@
-import sqlite3
+import mysql.connector
 import os
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATABASE = os.path.join(BASE_DIR, "database.db")
 
+# =========================
+# DB CONNECTION
+# =========================
 
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
+
+    return mysql.connector.connect(
+
+        host=os.environ.get("MYSQLHOST"),
+
+        user=os.environ.get("MYSQLUSER"),
+
+        password=os.environ.get("MYSQLPASSWORD"),
+
+        database=os.environ.get("MYSQLDATABASE"),
+
+        port=int(os.environ.get("MYSQLPORT", 3306))
+
+    )
 
 
 # =========================
@@ -16,16 +28,24 @@ def get_db_connection():
 # =========================
 
 def save_reset_token(email, token, expiry):
+
     conn = get_db_connection()
+
     cursor = conn.cursor()
 
     cursor.execute("""
         UPDATE users
-        SET reset_token = ?, reset_token_expiry = ?
-        WHERE email = ?
-    """, (token, expiry, email))
+        SET reset_token = %s,
+            reset_token_expiry = %s
+        WHERE email = %s
+    """, (
+        token,
+        expiry,
+        email
+    ))
 
     conn.commit()
+
     affected = cursor.rowcount
 
     cursor.close()
@@ -35,40 +55,45 @@ def save_reset_token(email, token, expiry):
 
 
 def get_user_by_reset_token(token):
+
     conn = get_db_connection()
-    cursor = conn.cursor()
+
+    cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
-        SELECT id, email, reset_token_expiry
+        SELECT
+            id,
+            email,
+            reset_token_expiry
         FROM users
-        WHERE reset_token = ?
+        WHERE reset_token = %s
         LIMIT 1
     """, (token,))
 
-    row = cursor.fetchone()
+    user = cursor.fetchone()
 
     cursor.close()
     conn.close()
 
-    if row:
-        return {
-            "id": row[0],
-            "email": row[1],
-            "reset_token_expiry": row[2]
-        }
-
-    return None
+    return user
 
 
 def update_user_password(user_id, hashed_password):
+
     conn = get_db_connection()
+
     cursor = conn.cursor()
 
     cursor.execute("""
         UPDATE users
-        SET password = ?, reset_token = NULL, reset_token_expiry = NULL
-        WHERE id = ?
-    """, (hashed_password, user_id))
+        SET password = %s,
+            reset_token = NULL,
+            reset_token_expiry = NULL
+        WHERE id = %s
+    """, (
+        hashed_password,
+        user_id
+    ))
 
     conn.commit()
 
@@ -81,45 +106,79 @@ def update_user_password(user_id, hashed_password):
 # =========================
 
 def check_existing_upload(file_name, file_size):
+
     conn = get_db_connection()
-    cursor = conn.cursor()
+
+    cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
         SELECT id
         FROM upload_history
-        WHERE file_name = ? AND file_size = ?
+        WHERE file_name = %s
+        AND file_size = %s
         ORDER BY id DESC
         LIMIT 1
-    """, (file_name, file_size))
+    """, (
+        file_name,
+        file_size
+    ))
 
-    row = cursor.fetchone()
+    result = cursor.fetchone()
 
     cursor.close()
     conn.close()
 
-    return row
+    return result
 
 
 # =========================
 # SAVE UPLOAD HISTORY
 # =========================
 
-def save_upload_history(user_id, file_name, file_size, file_type, insights,
-                        key_insights, recommendations, chart_data,
-                        structured_breakdown, ml_result,
-                        nlp_result, dl_result, pdf_report):
+def save_upload_history(
+    user_id,
+    file_name,
+    file_size,
+    file_type,
+    insights,
+    key_insights,
+    recommendations,
+    chart_data,
+    structured_breakdown,
+    ml_result,
+    nlp_result,
+    dl_result,
+    pdf_report
+):
 
     conn = get_db_connection()
+
     cursor = conn.cursor()
 
     cursor.execute("""
         INSERT INTO upload_history
-        (user_id, file_name, file_size, file_type,
-         insights, key_insights, recommendations,
-         chart_data, structured_breakdown,
-         ml_result, nlp_result, dl_result, pdf_report)
+        (
+            user_id,
+            file_name,
+            file_size,
+            file_type,
+            insights,
+            key_insights,
+            recommendations,
+            chart_data,
+            structured_breakdown,
+            ml_result,
+            nlp_result,
+            dl_result,
+            pdf_report
+        )
 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (
+            %s, %s, %s, %s,
+            %s, %s, %s,
+            %s, %s, %s,
+            %s, %s, %s
+        )
     """, (
         user_id,
         file_name,
@@ -150,10 +209,15 @@ def save_upload_history(user_id, file_name, file_size, file_type, insights,
 # SETTINGS
 # =========================
 
-def save_user_settings(analysis_type, report_format, visual_charts):
+def save_user_settings(
+    analysis_type,
+    report_format,
+    visual_charts
+):
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+
+    cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
         SELECT id
@@ -168,25 +232,29 @@ def save_user_settings(analysis_type, report_format, visual_charts):
 
         cursor.execute("""
             UPDATE app_settings
-            SET analysis_type = ?,
-                report_format = ?,
-                visual_charts = ?,
+            SET analysis_type = %s,
+                report_format = %s,
+                visual_charts = %s,
                 created_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE id = %s
         """, (
             analysis_type,
             report_format,
             visual_charts,
-            existing[0]
+            existing["id"]
         ))
 
     else:
 
         cursor.execute("""
             INSERT INTO app_settings
-            (analysis_type, report_format, visual_charts)
+            (
+                analysis_type,
+                report_format,
+                visual_charts
+            )
 
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
         """, (
             analysis_type,
             report_format,
@@ -202,28 +270,28 @@ def save_user_settings(analysis_type, report_format, visual_charts):
 def get_user_settings():
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+
+    cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
-        SELECT analysis_type, report_format, visual_charts
+        SELECT
+            analysis_type,
+            report_format,
+            visual_charts
+
         FROM app_settings
+
         ORDER BY id DESC
+
         LIMIT 1
     """)
 
-    row = cursor.fetchone()
+    settings = cursor.fetchone()
 
     cursor.close()
     conn.close()
 
-    if row:
-        return {
-            "analysis_type": row[0],
-            "report_format": row[1],
-            "visual_charts": row[2]
-        }
-
-    return None
+    return settings
 
 
 # =========================
@@ -233,18 +301,19 @@ def get_user_settings():
 def get_upload_history(user_id):
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+
+    cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
         SELECT *
         FROM upload_history
-        WHERE user_id = ?
+        WHERE user_id = %s
         ORDER BY id DESC
     """, (user_id,))
 
-    rows = cursor.fetchall()
+    history = cursor.fetchall()
 
     cursor.close()
     conn.close()
 
-    return rows
+    return history
