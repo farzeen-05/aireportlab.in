@@ -467,7 +467,7 @@ def history():
 def view_report(report_id):
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
         SELECT
@@ -569,7 +569,7 @@ def download_report(report_id):
 
     conn = get_db_connection()
 
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
 
@@ -720,7 +720,7 @@ def register():
         )
 
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
 
         cursor.execute("""
             SELECT *
@@ -780,7 +780,7 @@ def login():
         password = request.form['password']
 
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
 
         cursor.execute("""
             SELECT *
@@ -954,7 +954,7 @@ def google_callback():
             return redirect(url_for('login'))
 
         conn   = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
 
