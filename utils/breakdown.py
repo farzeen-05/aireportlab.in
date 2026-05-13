@@ -1,71 +1,267 @@
+"""
+utils/breakdown.py
+==================
+Generates structured breakdown for all file types.
+- Tabular: column-wise summary with stats
+- Text:    executive-style per-page summary (not raw text)
+"""
+
+import re
 import pandas as pd
+from collections import Counter
 
 TABULAR_TYPES = ['csv', 'excel', 'json_tabular']
 TEXT_TYPES    = ['pdf', 'docx', 'txt', 'json_text']
 
+STOPWORDS = set("""
+i me my myself we our ours ourselves you your yours yourself yourselves
+he him his himself she her hers herself it its itself they them their
+theirs themselves what which who whom this that these those am is are
+was were be been being have has had having do does did doing a an the
+and but if or because as until while of at by for with about against
+between into through during before after above below to from up down
+in out on off over under again further then once here there when where
+why how all both each few more most other some such no nor not only
+own same so than too very s t can will just don should now d ll m o
+re ve y ain aren couldn didn doesn hadn hasn haven isn ma mightn mustn
+needn shan shouldn wasn weren won wouldn also would could page module
+prof mangaluru pace sem figure table
+""".split())
+
 
 def generate_structured_breakdown(file_type, processed):
 
-    # ── Tabular: CSV / Excel / JSON (list of dicts) ───────────────────────────
+    # ── Tabular ───────────────────────────────────────────────────────────────
     if file_type in TABULAR_TYPES:
-        df = processed.get("cleaned_data")
-        if df is None or df.empty:
-            return []
+        return _column_breakdown(processed)
 
-        breakdown = []
-        for col in df.columns:
-            col_data    = df[col]
-            total       = len(col_data)
-            missing     = col_data.isnull().sum()
-            missing_pct = round((missing / total) * 100, 1) if total else 0
-            unique      = col_data.nunique()
-
-            if pd.api.types.is_numeric_dtype(col_data):
-                col_type = "Numeric"
-                summary  = (
-                    f"Min: {col_data.min():.2f}, "
-                    f"Max: {col_data.max():.2f}, "
-                    f"Mean: {col_data.mean():.2f}"
-                )
-            elif pd.api.types.is_datetime64_any_dtype(col_data):
-                col_type = "DateTime"
-                summary  = f"Range: {col_data.min()} → {col_data.max()}"
-            else:
-                col_type = "Categorical"
-                top      = col_data.value_counts().head(3).index.tolist()
-                summary  = f"Top values: {', '.join(str(v) for v in top)}"
-
-            breakdown.append({
-                "column":          col,
-                "type":            col_type,
-                "missing_percent": missing_pct,
-                "unique_values":   unique,
-                "summary":         summary,
-            })
-        return breakdown
-
-    # ── Text-based: PDF / DOCX / TXT / JSON (flat text) ─────────────────────
+    # ── Text ──────────────────────────────────────────────────────────────────
     elif file_type in TEXT_TYPES:
-        pages = processed.get("raw_pages", [])
-
-        # Fallback: split cleaned_text into chunks of 80 words
-        if not pages:
-            text  = processed.get("cleaned_text", "")
-            words = text.split()
-            pages = [
-                " ".join(words[i:i + 80])
-                for i in range(0, len(words), 80)
-                if words[i:i + 80]
-            ]
-
-        breakdown = []
-        for i, page_text in enumerate(pages, start=1):
-            word_count = len(page_text.split())
-            preview    = (page_text[:150] + "...") if len(page_text) > 150 else page_text
-            breakdown.append({
-                "page":    i,
-                "summary": f"{preview} ({word_count} words)",
-            })
-        return breakdown
+        return _page_breakdown(processed)
 
     return []
+
+
+# ── TABULAR breakdown ─────────────────────────────────────────────────────────
+
+def _column_breakdown(processed):
+    df = processed.get("cleaned_data")
+    if df is None or df.empty:
+        return []
+
+    roles    = processed.get("summary", {}).get("column_roles", {})
+    num_cols = roles.get("numeric_columns", [])
+    cat_cols = roles.get("categorical_columns", [])
+    dat_cols = roles.get("date_columns", [])
+    id_cols  = roles.get("id_columns", [])
+
+    breakdown = []
+    for col in df.columns:
+        col_data    = df[col]
+        total       = len(col_data)
+        missing     = col_data.isnull().sum()
+        missing_pct = round((missing / total) * 100, 1) if total else 0
+        unique      = col_data.nunique()
+
+        if col in id_cols:
+            col_type = "ID"
+            summary  = f"Identifier column with {unique} unique values."
+        elif col in dat_cols:
+            col_type = "DateTime"
+            try:
+                parsed = pd.to_datetime(col_data.dropna())
+                summary = f"Date range: {parsed.min().date()} to {parsed.max().date()}."
+            except Exception:
+                summary = "Time-based column for trend analysis."
+        elif pd.api.types.is_numeric_dtype(col_data):
+            col_type = "Numeric"
+            summary  = (
+                f"Min: {col_data.min():.2f}, "
+                f"Max: {col_data.max():.2f}, "
+                f"Mean: {col_data.mean():.2f}, "
+                f"Std: {col_data.std():.2f}."
+            )
+        else:
+            col_type = "Categorical"
+            top      = col_data.value_counts().head(3).index.tolist()
+            summary  = f"Top values: {', '.join(str(v) for v in top)}."
+
+        breakdown.append({
+            "column":          col,
+            "type":            col_type,
+            "missing_percent": missing_pct,
+            "unique_values":   unique,
+            "summary":         summary,
+        })
+
+    return breakdown
+
+
+# ── TEXT / PAGE breakdown ─────────────────────────────────────────────────────
+
+def _page_breakdown(processed):
+    pages = processed.get("raw_pages", [])
+
+    if not pages:
+        text  = processed.get("cleaned_text", "")
+        words = text.split()
+        pages = [
+            " ".join(words[i:i + 100])
+            for i in range(0, len(words), 100)
+            if words[i:i + 100]
+        ]
+
+    if not pages:
+        return []
+
+    # Detect repeated header (printed on every page — skip it)
+    first_lines = []
+    for page in pages:
+        lines = page.strip().split('\n')
+        if lines:
+            first_lines.append(lines[0].strip()[:60])
+    common = Counter(first_lines).most_common(1)
+    header_skip = common[0][0] if common and common[0][1] > 2 else None
+
+    breakdown = []
+
+    for i, page_text in enumerate(pages, start=1):
+        # ── Clean page text ───────────────────────────────────────────────────
+        lines = page_text.strip().split('\n')
+        clean_lines = []
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            # Skip repeated header
+            if header_skip and header_skip in line[:80]:
+                continue
+            # Skip page numbers like "1", "- 2 -", "Page 3"
+            if re.fullmatch(r'[\-–\s]*\d+[\-–\s]*', line):
+                continue
+            if re.fullmatch(r'[Pp]age\s*\d+', line):
+                continue
+            clean_lines.append(line)
+
+        clean_text = ' '.join(clean_lines).strip()
+        if not clean_text:
+            continue
+
+        # ── Extract heading ───────────────────────────────────────────────────
+        heading = _extract_heading(clean_lines)
+
+        # ── Extract key sentences ─────────────────────────────────────────────
+        key_sentences = _extract_key_sentences(clean_text, n=2)
+
+        # ── Extract keywords ──────────────────────────────────────────────────
+        keywords = _extract_keywords(clean_text, top_n=5)
+
+        # ── Build executive-style summary ─────────────────────────────────────
+        word_count = len(clean_text.split())
+        summary    = _build_page_summary(
+            page_num=i,
+            heading=heading,
+            key_sentences=key_sentences,
+            keywords=keywords,
+            word_count=word_count
+        )
+
+        breakdown.append({
+            "page":     i,
+            "heading":  heading,
+            "keywords": keywords,
+            "summary":  summary,
+        })
+
+    return breakdown
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _extract_heading(lines):
+    """Find the most heading-like line on the page."""
+    for line in lines[:8]:
+        line = line.strip()
+        if not line or len(line) < 5:
+            continue
+        # Numbered heading: "1.2 Introduction" or "3. Methodology"
+        if re.match(r'^\d+[\.\d]*\s+[A-Z]', line) and len(line) < 80:
+            return line
+        # ALL CAPS heading
+        if line.isupper() and 5 < len(line) < 80:
+            return line.title()
+        # Title case heading (no period at end, reasonable length)
+        if (line[0].isupper() and
+                not line.endswith('.') and
+                10 < len(line) < 70 and
+                sum(1 for c in line if c.isupper()) >= 2):
+            return line
+    return None
+
+
+def _extract_key_sentences(text, n=2):
+    """
+    Extract the most informative sentences using keyword density scoring.
+    Returns up to n sentences.
+    """
+    # Split into sentences
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    sentences = [s.strip() for s in sentences if 20 < len(s.strip()) < 300]
+
+    if not sentences:
+        return []
+
+    # Score each sentence by keyword density
+    all_words = re.findall(r'\b[a-z]{4,}\b', text.lower())
+    all_words = [w for w in all_words if w not in STOPWORDS]
+    word_freq = Counter(all_words)
+
+    scored = []
+    for sent in sentences:
+        words = re.findall(r'\b[a-z]{4,}\b', sent.lower())
+        words = [w for w in words if w not in STOPWORDS]
+        score = sum(word_freq.get(w, 0) for w in words) / max(len(words), 1)
+        scored.append((score, sent))
+
+    scored.sort(reverse=True)
+    return [s for _, s in scored[:n]]
+
+
+def _extract_keywords(text, top_n=5):
+    """Extract top keywords from page text."""
+    words = re.findall(r'\b[a-z]{4,}\b', text.lower())
+    words = [w for w in words if w not in STOPWORDS]
+    freq  = Counter(words)
+    return [w for w, _ in freq.most_common(top_n)]
+
+
+def _build_page_summary(page_num, heading, key_sentences, keywords, word_count):
+    """
+    Build an executive-style summary for a single page.
+    Format:
+      [Heading if found] Key sentence 1. Key sentence 2.
+      Topics covered: keyword1, keyword2, keyword3.
+    """
+    parts = []
+
+    # Add heading context
+    if heading:
+        parts.append(f"This section covers '{heading}'.")
+
+    # Add key sentences
+    if key_sentences:
+        parts.extend(key_sentences)
+    elif word_count > 0:
+        parts.append(f"This page contains {word_count} words of content.")
+
+    # Add keyword summary
+    if keywords:
+        parts.append(f"Key topics: {', '.join(keywords)}.")
+
+    summary = ' '.join(parts)
+
+    # Trim if too long
+    if len(summary) > 400:
+        summary = summary[:397] + "..."
+
+    return summary if summary else f"Page {page_num} — {word_count} words."
