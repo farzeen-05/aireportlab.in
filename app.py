@@ -457,7 +457,8 @@ def history():
 
     return render_template(
         'history.html',
-        records=records
+        records=records,
+        timedelta=timedelta
     )
 
 # ─── View report ──────────────────────────────────────────────────────────────
