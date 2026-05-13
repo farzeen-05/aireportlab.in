@@ -41,7 +41,13 @@
             <td>
               <span class="badge badge-blue">{{ (row.file_type or 'N/A') | upper }}</span>
             </td>
-            <td class="text-muted text-sm">{{ row.upload_date or '—' }}</td>
+           <td class="text-muted text-sm">
+  {% if row.upload_date %}
+    {{ (row.upload_date + timedelta(hours=5, minutes=30)).strftime('%d-%m-%Y %I:%M %p') }}
+  {% else %}
+    —
+  {% endif %}
+</td>
             <td class="text-muted text-sm truncate" style="max-width:220px;">
               {# ✅ None-safe — all columns that may be NULL #}
               {% if row.insights %}
