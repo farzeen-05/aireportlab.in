@@ -1,31 +1,89 @@
-def generate_final_report(file_type, processed, insights, ml_output=None, nlp_output=None, dl_output=None, document_type="generic", research_sections=None):
+"""
+utils/report_generator.py
+=========================
+Generates the final report by using insights directly from
+TextAnalysisEngine (for text files) or tabular analysis (for CSV/Excel).
+"""
+
+TABULAR_TYPES = ['csv', 'excel', 'json_tabular']
+TEXT_TYPES    = ['pdf', 'docx', 'txt', 'json_text']
+
+
+def generate_final_report(file_type, processed, insights,
+                           ml_output=None, nlp_output=None, dl_output=None,
+                           document_type="generic", research_sections=None):
     report = {}
 
-    if file_type in ['csv', 'excel', 'json_tabular']:
+    # ── Tabular: CSV / Excel / JSON tabular ───────────────────────────────────
+    if file_type in TABULAR_TYPES:
         report["executive_summary"] = generate_tabular_summary(processed, ml_output)
         report["key_insights"]      = generate_tabular_insights(processed)
         report["recommendations"]   = generate_tabular_recommendations(processed, ml_output)
 
-    elif file_type in ['pdf', 'docx', 'txt', 'json_text']:
-        report["executive_summary"] = generate_text_summary(processed, nlp_output, dl_output, document_type, research_sections)
-        report["key_insights"]      = generate_text_insights(processed, nlp_output, document_type, research_sections)
-        report["recommendations"]   = generate_text_recommendations(processed, nlp_output, document_type)
+    # ── Text: PDF / DOCX / TXT / JSON text ───────────────────────────────────
+    elif file_type in TEXT_TYPES:
+        # ── Use TextAnalysisEngine output directly ────────────────────────────
+        # insights dict comes from generate_insights() which runs the engine
+        exec_summary = insights.get("executive_summary", "")
+        key_insights = insights.get("key_insights", [])
+        recommendations = insights.get("recommendations", [])
+
+        # ── Enrich with DL summary if available ──────────────────────────────
+        if dl_output and dl_output.get("dl_summary"):
+            dl_text = dl_output["dl_summary"]
+            # Append DL analysis to executive summary
+            if exec_summary and dl_text not in exec_summary:
+                exec_summary = exec_summary.rstrip(".") + ". " + dl_text
+
+        # ── Enrich insights with NLP output ──────────────────────────────────
+        if nlp_output:
+            # Add sentiment if not already in insights
+            sentiment   = nlp_output.get("sentiment", "")
+            readability = nlp_output.get("readability", "")
+            keyphrases  = nlp_output.get("keyphrases", [])
+
+            if sentiment and not any("sentiment" in i.lower() for i in key_insights):
+                key_insights.append(
+                    f"Document tone is {sentiment} with {readability} readability level."
+                )
+            if keyphrases and not any("phrase" in i.lower() for i in key_insights):
+                key_insights.append(
+                    f"Key phrases identified: {', '.join(keyphrases[:4])}."
+                )
+
+        # ── Research paper extra sections ─────────────────────────────────────
+        if document_type == "research_paper" and research_sections:
+            abstract    = research_sections.get("abstract", "")[:200]
+            methodology = research_sections.get("methodology", "")[:150]
+            results     = research_sections.get("results", "")[:150]
+
+            if abstract and abstract not in exec_summary:
+                exec_summary = exec_summary.rstrip(".") + f". Abstract: {abstract}."
+            if methodology:
+                key_insights.append(f"Methodology: {methodology[:100]}...")
+            if results:
+                key_insights.append(f"Key findings: {results[:100]}...")
+
+        report["executive_summary"] = exec_summary
+        report["key_insights"]      = [i for i in key_insights if i]
+        report["recommendations"]   = [r for r in recommendations if r]
 
     return report
 
 
-# ── TABULAR ────────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# TABULAR FUNCTIONS (unchanged — already working well)
+# ══════════════════════════════════════════════════════════════════════════════
 
 def generate_tabular_summary(processed, ml_output):
-    summary = processed["summary"]
-    roles   = summary["column_roles"]
-    domain  = summary.get("dataset_domain", "generic")
-
-    rows           = summary["rows"]
-    cols           = summary["columns"]
-    numeric_cols   = roles["numeric_columns"][:3]
+    summary          = processed["summary"]
+    roles            = summary["column_roles"]
+    domain           = summary.get("dataset_domain", "generic")
+    rows             = summary["rows"]
+    cols             = summary["columns"]
+    numeric_cols     = roles["numeric_columns"][:3]
     categorical_cols = roles["categorical_columns"][:2]
-    date_cols      = roles["date_columns"][:1]
+    date_cols        = roles["date_columns"][:1]
 
     domain_phrases = {
         "real_estate": {
@@ -63,14 +121,16 @@ def generate_tabular_summary(processed, ml_output):
     phrasing = domain_phrases.get(domain, domain_phrases["generic"])
 
     text = (
-        f"This dataset contains {rows} records across {cols} attributes, with primary {phrasing['metric_label']} including "
-        f"{', '.join(numeric_cols) if numeric_cols else 'core measurable variables'} and {phrasing['category_label']} such as "
+        f"This dataset contains {rows:,} records across {cols} attributes, "
+        f"with primary {phrasing['metric_label']} including "
+        f"{', '.join(numeric_cols) if numeric_cols else 'core measurable variables'} "
+        f"and {phrasing['category_label']} such as "
         f"{', '.join(categorical_cols) if categorical_cols else 'key grouping fields'}. "
     )
     if date_cols:
         text += f"Time-based analysis is supported through {', '.join(date_cols)}. "
     text += "Data quality was improved through duplicate removal, missing-value treatment, and datatype standardization. "
-    if ml_output:
+    if ml_output and ml_output.get("ml_result"):
         text += f"{ml_output['ml_result']} "
     text += phrasing["closing"]
     return text
@@ -94,15 +154,15 @@ def generate_tabular_insights(processed):
     }
 
     insights = [
-        f"The dataset includes {summary['rows']} rows and {summary['columns']} columns.",
-        f"Key measurable metrics include {', '.join(numeric_cols) if numeric_cols else 'core numerical indicators'}.",
-        f"Primary segmentation dimensions include {', '.join(categorical_cols) if categorical_cols else domain_labels.get(domain, 'category fields')}.",
-        "Duplicates were removed and missing values were handled using datatype-aware preprocessing."
+        f"The dataset includes {summary['rows']:,} rows and {summary['columns']} columns.",
+        f"Key measurable metrics include {', '.join(numeric_cols)}." if numeric_cols else "",
+        f"Primary segmentation dimensions include {', '.join(categorical_cols)}." if categorical_cols else
+        f"Primary grouping fields: {domain_labels.get(domain, 'category fields')}.",
+        "Duplicates were removed and missing values were handled using datatype-aware preprocessing.",
+        f"Trend analysis is supported through {', '.join(date_cols)}." if date_cols else
+        "The dataset is suitable for trend analysis, category comparison, and anomaly monitoring.",
     ]
-    if date_cols:
-        insights.append(f"Trend analysis is supported through {', '.join(date_cols)}.")
-    insights.append("The dataset is suitable for trend analysis, category comparison, and anomaly monitoring.")
-    return insights
+    return [i for i in insights if i]
 
 
 def generate_tabular_recommendations(processed, ml_output):
@@ -114,21 +174,31 @@ def generate_tabular_recommendations(processed, ml_output):
     date_cols        = roles["date_columns"]
 
     recommendations = [
-        f"Prioritize metrics such as {', '.join(numeric_cols) if numeric_cols else 'core numeric indicators'} for focused analysis."
+        f"Prioritize metrics such as {', '.join(numeric_cols) if numeric_cols else 'core numeric indicators'} for focused analysis.",
     ]
     if categorical_cols:
-        recommendations.append(f"Use dimensions such as {', '.join(categorical_cols)} for segmentation and comparison.")
+        recommendations.append(
+            f"Use dimensions such as {', '.join(categorical_cols)} for segmentation and comparison."
+        )
     if date_cols:
-        recommendations.append(f"Use {date_cols[0]} to monitor trends over time and improve forecasting accuracy.")
+        recommendations.append(
+            f"Use {date_cols[0]} to monitor trends over time and improve forecasting accuracy."
+        )
     else:
-        recommendations.append("Compare key numeric relationships to identify hidden trends and performance patterns.")
+        recommendations.append(
+            "Compare key numeric relationships to identify hidden trends and performance patterns."
+        )
 
     if summary["rows"] > 5000:
-        recommendations.append("Consider segment-level aggregation to simplify analysis across large-scale records.")
+        recommendations.append(
+            "Consider segment-level aggregation to simplify analysis across large-scale records."
+        )
     elif summary["rows"] < 200:
-        recommendations.append("Use caution when generalizing insights due to the relatively small dataset size.")
+        recommendations.append(
+            "Use caution when generalizing insights due to the relatively small dataset size."
+        )
 
-    domain_recommendations = {
+    domain_recs = {
         "real_estate": [
             "Monitor property pricing patterns to identify valuation shifts and unusual listings.",
             "Compare housing attributes across property segments to improve pricing interpretation."
@@ -148,156 +218,24 @@ def generate_tabular_recommendations(processed, ml_output):
         "logistics": [
             "Track operational movement to identify route inefficiencies and delays.",
             "Use shipment segmentation to improve logistics planning and execution."
-        ]
+        ],
     }
-    if domain in domain_recommendations:
-        recommendations.extend(domain_recommendations[domain])
+    if domain in domain_recs:
+        recommendations.extend(domain_recs[domain])
 
     if ml_output:
         anomaly_rate = ml_output.get("anomaly_rate", 0)
         if anomaly_rate >= 8:
-            recommendations.append("A high anomaly rate was detected; review flagged records before making critical decisions.")
+            recommendations.append(
+                "A high anomaly rate was detected; review flagged records before making critical decisions."
+            )
         elif anomaly_rate >= 3:
-            recommendations.append("Review flagged anomalies to validate unusual patterns before action.")
+            recommendations.append(
+                "Review flagged anomalies to validate unusual patterns before action."
+            )
         else:
-            recommendations.append("Only minor anomalies were detected, indicating relatively stable behavior.")
-
-    return recommendations
-
-
-# ── TEXT ───────────────────────────────────────────────────────────────────────
-
-def generate_text_summary(processed, nlp_output, dl_output, document_type="generic", research_sections=None):
-    summary        = processed["summary"]
-    total_words    = summary["total_words"]
-    filtered_words = summary["filtered_words"]
-
-    if document_type == "research_paper":
-        text = f"This research paper contains approximately {total_words} words, with {filtered_words} relevant terms retained after preprocessing. "
-        if research_sections:
-            abstract    = research_sections.get("abstract",    "")[:220]
-            methodology = research_sections.get("methodology", "")[:180]
-            results     = research_sections.get("results",     "")[:150]
-            if abstract:    text += f"It focuses on {abstract}. "
-            if methodology: text += f"The study proposes {methodology}. "
-            if results:     text += f"Key findings suggest {results}. "
-        text += "Overall, the document presents a structured technical contribution suitable for academic review, research interpretation, and rapid summarization."
-        return text
-
-    elif document_type == "business_report":
-        text = (
-            f"This business document contains approximately {total_words} words, with {filtered_words} relevant terms retained after preprocessing. "
-            "The content highlights operational priorities, business performance, and decision-oriented insights. "
-        )
-        if nlp_output:
-            text += f"Key themes include {', '.join(nlp_output['keywords'][:5])}. "
-        text += "Overall, the report is suitable for executive review and business interpretation."
-        return text
-
-    elif document_type == "resume":
-        text = f"This resume contains approximately {total_words} words and was analyzed for professional background, technical skills, and experience relevance. "
-        if nlp_output:
-            text += f"Key profile themes include {', '.join(nlp_output['keywords'][:5])}. "
-        text += "Overall, the document is suitable for candidate screening and qualification review."
-        return text
-
-    elif document_type == "legal_document":
-        text = f"This legal document contains approximately {total_words} words and was analyzed for obligations, compliance requirements, and policy interpretation. "
-        if nlp_output:
-            text += f"Key legal themes include {', '.join(nlp_output['keywords'][:5])}. "
-        text += "Overall, the document is suitable for compliance review and legal interpretation."
-        return text
-
-    else:
-        text = (
-            f"The uploaded document contains approximately {total_words} words, with {filtered_words} relevant terms retained after preprocessing. "
-            "The content was analyzed for thematic relevance, contextual meaning, and semantic structure. "
-        )
-        if nlp_output:
-            text += f"Key themes include {', '.join(nlp_output['keywords'][:5])}. "
-        text += "Overall, the document is suitable for rapid interpretation and structured summarization."
-        return text
-
-
-def generate_text_insights(processed, nlp_output, document_type="generic", research_sections=None):
-    if document_type == "research_paper":
-        insights = [
-            "The document follows a research-oriented structure with technical and methodological content.",
-            "The extracted content is suitable for academic summarization and contribution analysis.",
-            "Text normalization improved technical keyword clarity and semantic interpretation."
-        ]
-        if research_sections:
-            if research_sections.get("methodology"):
-                insights.append("The paper includes a clearly identifiable methodology or proposed system section.")
-            if research_sections.get("results"):
-                insights.append("The paper includes measurable findings suitable for result-oriented interpretation.")
-
-    elif document_type == "business_report":
-        insights = [
-            "The document is structured around business and operational themes.",
-            "The extracted content is suitable for executive interpretation and performance review.",
-            "Text normalization improved business keyword clarity and semantic interpretation."
-        ]
-
-    else:
-        insights = [
-            f"The processed document contains {processed['summary']['filtered_words']} relevant terms for semantic analysis.",
-            "Text normalization improved keyword quality and contextual clarity.",
-            "The content is suitable for thematic interpretation and summarization."
-        ]
-
-    if nlp_output:
-        insights.append(f"Top extracted keywords include {', '.join(nlp_output['keywords'][:5])}.")
-
-    return insights
-
-
-def generate_text_recommendations(processed, nlp_output=None, document_type="generic"):
-    summary        = processed["summary"]
-    total_words    = summary.get("total_words", 0)
-    filtered_words = summary.get("filtered_words", 0)
-
-    keyword_density = round((filtered_words / total_words) * 100, 2) if total_words > 0 else 0
-
-    recommendations = []
-
-    if keyword_density < 35:
-        recommendations.append("The document contains substantial filler content; focus on extracted keywords and summary for faster interpretation.")
-    else:
-        recommendations.append("The extracted keywords provide a strong signal of the document's core themes and intent.")
-
-    if total_words > 3000:
-        recommendations.append("Use the generated summary before reviewing the full document to reduce reading time.")
-    elif total_words < 500:
-        recommendations.append("The document is concise; review both summary and original text for full context.")
-
-    if nlp_output and nlp_output.get("keywords"):
-        recommendations.append(f"Focus on high-signal themes such as {', '.join(nlp_output['keywords'][:3])} for faster interpretation.")
-
-    if document_type == "research_paper":
-        recommendations.extend([
-            "Review the methodology and results sections first to assess technical contribution quickly.",
-            "Use extracted themes to accelerate academic review and literature comparison."
-        ])
-    elif document_type == "business_report":
-        recommendations.extend([
-            "Focus on operational themes to identify business priorities quickly.",
-            "Use extracted signals to support faster executive decision-making."
-        ])
-    elif document_type == "resume":
-        recommendations.extend([
-            "Review technical skills and experience alignment before detailed screening.",
-            "Use the summary to assess candidate fit quickly."
-        ])
-    elif document_type == "legal_document":
-        recommendations.extend([
-            "Review obligations and compliance clauses before full legal review.",
-            "Use extracted legal themes to identify risk areas quickly."
-        ])
-    else:
-        recommendations.extend([
-            "Use the generated summary to assess document intent before full review.",
-            "Review thematic highlights for faster interpretation and decision-making."
-        ])
+            recommendations.append(
+                "Only minor anomalies were detected, indicating relatively stable behavior."
+            )
 
     return recommendations
