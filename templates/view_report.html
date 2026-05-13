@@ -148,13 +148,11 @@
 </div>
 {% endif %}
 
-<!-- Structured Breakdown -->
-{% if report.structured_breakdown %}
+{# ── Structured Breakdown ──────────────────────────────────────────────────── #}
+{% if structured_breakdown %}
 
-{% set breakdown_list = report.structured_breakdown if report.structured_breakdown is not string
-                        else report.structured_breakdown.split(' || ') %}
-
-{% set is_tabular = report.file_type in ('csv', 'excel', 'json_tabular') %}
+{% set is_tabular = result.type in ('csv', 'excel', 'json_tabular') if result is defined
+                    else report.file_type in ('csv', 'excel', 'json_tabular') %}
 
 <div class="card mb-3">
   <div class="card-header">
@@ -163,82 +161,132 @@
       {% if is_tabular %}Column-wise Summary{% else %}Page-wise Summary{% endif %}
     </span>
     <span class="text-muted text-xs" style="margin-left:auto;">
-      {{ breakdown_list|length }} {{ 'columns' if is_tabular else 'sections' }}
+      {{ structured_breakdown|length }}
+      {{ 'columns' if is_tabular else 'pages' }}
     </span>
   </div>
-  <div class="card-body">
-    <ul style="display:flex;flex-direction:column;gap:0.5rem;padding-left:0;list-style:none;">
 
-      {% for item in breakdown_list %}
-        {% set item_str = item.summary if item is mapping else item|string %}
-        {% if item_str and item_str.strip() %}
-
-        <li style="padding:0.6rem 0.85rem;
-                   background:var(--bg2);
-                   border:1px solid var(--border);
-                   border-radius:8px;
-                   font-size:0.85rem;
-                   color:var(--text2);
-                   line-height:1.6;">
-
-          {% if is_tabular %}
-            {# Parse: "ColName (Type) - Missing: X%, Unique: Y - summary text" #}
-            {% set parts = item_str.split(' - ') %}
-            {% if parts|length >= 2 %}
-              {% set name_type = parts[0].split('(') %}
-              <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;flex-wrap:wrap;">
-                <span style="font-weight:600;color:var(--text1);font-size:0.88rem;">
-                  {{ name_type[0].strip() }}
+  {% if is_tabular %}
+  {# ── Tabular: table layout ── #}
+  <div class="card-body" style="padding:0;">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Column</th>
+            <th>Type</th>
+            <th>Missing %</th>
+            <th>Unique</th>
+            <th>Summary</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in structured_breakdown %}
+          {% set item_str = item.summary if item is mapping else item|string %}
+          {% if item_str and item_str.strip() %}
+          <tr>
+            {% if item is mapping and item.column is defined %}
+              <td class="fw-mid">{{ item.column }}</td>
+              <td>
+                <span class="badge
+                  {% if item.type == 'Numeric' %}badge-blue
+                  {% elif item.type == 'Categorical' %}badge-green
+                  {% elif item.type == 'DateTime' %}badge-purple
+                  {% elif item.type == 'ID' %}badge-muted
+                  {% else %}badge-muted{% endif %}">
+                  {{ item.type }}
                 </span>
-                {% if name_type|length > 1 %}
-                <span class="badge badge-blue" style="font-size:0.68rem;padding:0.15rem 0.5rem;">
-                  {{ name_type[1].replace(')','').strip() }}
-                </span>
-                {% endif %}
-              </div>
-              {% if parts|length >= 2 %}
-              <div style="font-size:0.78rem;color:var(--text2);margin-bottom:0.25rem;">
-                {{ parts[1].strip() }}
-              </div>
-              {% endif %}
-              {% if parts|length >= 3 %}
-              <div style="font-size:0.82rem;color:var(--text2);">
-                {{ parts[2:] | join(' - ') }}
-              </div>
-              {% endif %}
+              </td>
+              <td class="text-muted">{{ item.missing_percent }}%</td>
+              <td class="text-muted">{{ item.unique_values }}</td>
+              <td class="text-muted text-sm">{{ item.summary }}</td>
             {% else %}
-              {{ item_str.strip() }}
+              <td colspan="5" class="text-muted text-sm">{{ item_str.strip() }}</td>
             {% endif %}
-
-          {% else %}
-            {# Parse: "Page N - preview text (W words)" #}
-            {% set parts = item_str.split(' - ', 1) %}
-            {% if parts|length == 2 %}
-              <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">
-                <span style="font-weight:600;color:var(--text1);font-size:0.82rem;
-                             background:var(--accent);color:#fff;
-                             padding:0.1rem 0.5rem;border-radius:4px;">
-                  {{ parts[0].strip() }}
-                </span>
-              </div>
-              <div style="font-size:0.82rem;color:var(--text2);line-height:1.55;">
-                {{ parts[1].strip() }}
-              </div>
-            {% else %}
-              {{ item_str.strip() }}
-            {% endif %}
-
+          </tr>
           {% endif %}
-        </li>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 
+  {% else %}
+  {# ── Text: executive-style page cards ── #}
+  <div class="card-body">
+    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+
+      {% for item in structured_breakdown %}
+        {% if item is mapping %}
+          {% set summary = item.get('summary', '') %}
+          {% set heading = item.get('heading', '') %}
+          {% set keywords = item.get('keywords', []) %}
+          {% set page_num = item.get('page', loop.index) %}
+        {% else %}
+          {% set summary = item|string %}
+          {% set heading = '' %}
+          {% set keywords = [] %}
+          {% set page_num = loop.index %}
+        {% endif %}
+
+        {% if summary and summary.strip() %}
+        <div style="
+          padding:0.85rem 1rem;
+          background:var(--bg2);
+          border:1px solid var(--border);
+          border-left:3px solid var(--accent);
+          border-radius:8px;
+        ">
+          {# Page header row #}
+          <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+            <span style="
+              background:var(--accent);
+              color:#fff;
+              font-size:0.7rem;
+              font-weight:700;
+              padding:0.15rem 0.55rem;
+              border-radius:4px;
+              flex-shrink:0;
+            ">Page {{ page_num }}</span>
+
+            {% if heading %}
+            <span style="font-size:0.82rem;font-weight:600;color:var(--text1);">
+              {{ heading }}
+            </span>
+            {% endif %}
+          </div>
+
+          {# Summary text #}
+          <p style="font-size:0.83rem;color:var(--text2);line-height:1.65;margin:0 0 0.5rem 0;">
+            {{ summary }}
+          </p>
+
+          {# Keyword badges #}
+          {% if keywords %}
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.4rem;">
+            {% for kw in keywords %}
+            <span style="
+              font-size:0.68rem;
+              padding:0.1rem 0.45rem;
+              background:rgba(59,130,246,0.1);
+              color:var(--accent2);
+              border:1px solid rgba(59,130,246,0.2);
+              border-radius:4px;
+            ">{{ kw }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+        </div>
         {% endif %}
       {% endfor %}
 
-    </ul>
+    </div>
   </div>
+  {% endif %}
+
 </div>
 {% endif %}
-
 <!-- Recommendations -->
 {% if report.recommendations %}
 {% set recs_list = report.recommendations if report.recommendations is not string
