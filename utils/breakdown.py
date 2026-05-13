@@ -63,28 +63,65 @@ def _column_breakdown(processed):
         missing_pct = round((missing / total) * 100, 1) if total else 0
         unique      = col_data.nunique()
 
+        col_label = col.replace('_', ' ').title()
+        miss_text = f"No missing values detected." if missing_pct == 0 else f"{missing_pct}% of values are missing."
+
         if col in id_cols:
             col_type = "ID"
-            summary  = f"Identifier column with {unique} unique values."
+            summary  = (
+                f"The {col_label} column is an identifier field with {unique} unique values. "
+                f"It serves as a record key and is excluded from statistical analysis. "
+                f"{miss_text}"
+            )
         elif col in dat_cols:
             col_type = "DateTime"
             try:
-                parsed = pd.to_datetime(col_data.dropna())
-                summary = f"Date range: {parsed.min().date()} to {parsed.max().date()}."
+                parsed    = pd.to_datetime(col_data.dropna())
+                date_min  = parsed.min().date()
+                date_max  = parsed.max().date()
+                span_days = (parsed.max() - parsed.min()).days
+                summary   = (
+                    f"The {col_label} column is a time-based feature spanning {span_days} days, "
+                    f"from {date_min} to {date_max}. "
+                    f"It enables trend analysis, time-series forecasting, and temporal segmentation. "
+                    f"{miss_text}"
+                )
             except Exception:
-                summary = "Time-based column for trend analysis."
+                summary = (
+                    f"The {col_label} column contains date or time values "
+                    f"suitable for trend and time-series analysis. {miss_text}"
+                )
         elif pd.api.types.is_numeric_dtype(col_data):
             col_type = "Numeric"
-            summary  = (
-                f"Min: {col_data.min():.2f}, "
-                f"Max: {col_data.max():.2f}, "
-                f"Mean: {col_data.mean():.2f}, "
-                f"Std: {col_data.std():.2f}."
+            mn   = col_data.min()
+            mx   = col_data.max()
+            mean = col_data.mean()
+            std  = col_data.std()
+            # Detect skew
+            skew = col_data.skew() if hasattr(col_data, 'skew') else 0
+            skew_text = (
+                "The distribution is right-skewed, indicating a few high outliers." if skew > 1 else
+                "The distribution is left-skewed, indicating a few low outliers."   if skew < -1 else
+                "The distribution is approximately normal."
+            )
+            summary = (
+                f"The {col_label} column is a numeric feature ranging from {mn:.2f} to {mx:.2f}, "
+                f"with a mean of {mean:.2f} and standard deviation of {std:.2f}. "
+                f"{skew_text} "
+                f"It is suitable for statistical analysis, correlation studies, and trend monitoring. "
+                f"{miss_text}"
             )
         else:
             col_type = "Categorical"
             top      = col_data.value_counts().head(3).index.tolist()
-            summary  = f"Top values: {', '.join(str(v) for v in top)}."
+            top_str  = ', '.join(str(v) for v in top)
+            pct_top  = round(col_data.value_counts().iloc[0] / len(col_data) * 100, 1) if len(col_data) > 0 else 0
+            summary  = (
+                f"The {col_label} column is a categorical feature with {unique} distinct values. "
+                f"The most frequent values are {top_str}, with the dominant category accounting for {pct_top}% of records. "
+                f"It is useful for segmentation, grouping, and comparative analysis. "
+                f"{miss_text}"
+            )
 
         breakdown.append({
             "column":          col,
