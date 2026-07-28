@@ -12,7 +12,7 @@
 
 > Upload any CSV, Excel, PDF, DOCX, JSON, or TXT file and instantly get a professional, AI-generated analytical report — 15+ auto-selected visualizations, NLP keyword extraction, ML anomaly detection, and a downloadable PDF. No coding required.
 
-🔗 **Live Demo:** [[https://aireportlab-in.onrender.com](https://aireportlab-in-hzxn.onrender.com/)](https://aireportlab-in-hzxn.onrender.com/)
+🔗 **Live Demo:** [[https://aireportlab-in-hzxn.onrender.com/](https://aireportlab-in-hzxn.onrender.com/)]
 
 ---
 
