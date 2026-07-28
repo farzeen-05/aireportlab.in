@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
 ![Flask](https://img.shields.io/badge/Flask-Backend-000000?logo=flask)
-![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?logo=sqlite)
+![MySQL](https://img.shields.io/badge/MySQL-Database-4479A1?logo=mysql&logoColor=white)
 ![Scikit-learn](https://img.shields.io/badge/Scikit--learn-ML-F7931E?logo=scikitlearn)
 ![NLTK](https://img.shields.io/badge/NLTK-NLP-green)
 ![ReportLab](https://img.shields.io/badge/ReportLab-PDF%20Export-red)
@@ -12,7 +12,7 @@
 
 > Upload any CSV, Excel, PDF, DOCX, JSON, or TXT file and instantly get a professional, AI-generated analytical report — 15+ auto-selected visualizations, NLP keyword extraction, ML anomaly detection, and a downloadable PDF. No coding required.
 
-🔗 **Live Demo:** [https://aireportlab-in.onrender.com](https://aireportlab-in-hzxn.onrender.com/)
+🔗 **Live Demo:** [[https://aireportlab-in.onrender.com](https://aireportlab-in-hzxn.onrender.com/)](https://aireportlab-in-hzxn.onrender.com/)
 
 ---
 
