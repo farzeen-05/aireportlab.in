@@ -131,6 +131,54 @@ For PDF/DOCX/TXT/JSON documents:
 
 ---
 
+## 📁 Project Structure
+ 
+```
+aireportlab.in/
+│
+├── app.py                      # Main Flask application
+├── visualization_engine.py     # Custom chart generation engine
+├── text_analysis_engine.py     # Custom NLP & domain analysis engine
+├── gunicorn.conf.py            # Production server config
+├── requirements.txt
+│
+├── utils/
+│   ├── file_reader.py          # Multi-format file extraction
+│   ├── preprocess.py           # Data cleaning & preprocessing
+│   ├── insights.py             # AI insight generation
+│   ├── breakdown.py            # Column/page breakdown summaries
+│   ├── ml_model.py             # Anomaly detection
+│   ├── nlp_model.py            # NLP analysis
+│   ├── dl_model.py             # Deep linguistic analysis
+│   ├── report_generator.py     # Final report assembly
+│   ├── export_report.py        # PDF generation (ReportLab)
+│   ├── document_classifier.py  # Document type detection
+│   ├── research_parser.py      # Research paper section extraction
+│   └── db.py                   # Database operations
+│
+├── templates/
+│   ├── base.html
+│   ├── landing.html
+│   ├── upload.html
+│   ├── report.html
+│   ├── view_report.html
+│   ├── history.html
+│   ├── settings.html
+│   ├── login.html
+│   ├── register.html
+│   └── ...
+│
+├── static/
+│   ├── charts/                 # Generated chart images
+│   ├── css/
+│   ├── js/
+│   └── img/
+│
+└── database.db                 # SQLite database
+```
+ 
+---
+
 ## Module Breakdown
 
 | Module | Responsibility |
