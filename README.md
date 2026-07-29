@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
 ![Flask](https://img.shields.io/badge/Flask-Backend-000000?logo=flask)
-![MySQL](https://img.shields.io/badge/MySQL-Database-003B57?logo=MySQL)
+![MySQL](https://img.shields.io/badge/MySQL-Database-4479A1?logo=mysql&logoColor=white)
 ![Scikit-learn](https://img.shields.io/badge/Scikit--learn-ML-F7931E?logo=scikitlearn)
 ![NLTK](https://img.shields.io/badge/NLTK-NLP-green)
 ![ReportLab](https://img.shields.io/badge/ReportLab-PDF%20Export-red)
@@ -284,7 +284,9 @@ Open `http://localhost:5000` in your browser.
 ECE Graduate | ML & Full-Stack Developer | MLOps & Cloud
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?logo=linkedin)](https://www.linkedin.com/in/farzeen-abdul-khadir-8921ba2a1)
+
 [![GitHub](https://img.shields.io/badge/GitHub-Follow-181717?logo=github)](https://github.com/farzeen-05)
+
 [![Email](https://img.shields.io/badge/Email-farzeen99453@gmail.com-EA4335?style=flat&logo=gmail)](mailto:farzeen99453@gmail.com)
  
 
