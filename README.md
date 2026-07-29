@@ -1,4 +1,4 @@
-# 📊 aireportlab — AI-Powered Document & Dataset Analysis Platform
+# 📊 aireportlab — AI-Powered Document & Dataset Analysis PlatformS
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
 ![Flask](https://img.shields.io/badge/Flask-Backend-000000?logo=flask)
@@ -174,7 +174,7 @@ aireportlab.in/
 │   ├── js/
 │   └── img/
 │
-└── database.db                 # SQLite database
+└── database.db                 # MySQL database
 ```
  
 ---
