@@ -78,7 +78,7 @@ User uploads file (CSV / Excel / PDF / DOCX / JSON / TXT)
       PDF Export (ReportLab, in-memory)
               │
               ▼
-      Saved as BLOB in SQLite → served to user
+      Saved as BLOB in MySQL → served to user
 ```
 
 ---
@@ -142,11 +142,11 @@ For PDF/DOCX/TXT/JSON documents:
 | `utils/nlp_model.py` | Runs TextAnalysisEngine for text files |
 | `utils/report_generator.py` | Combines all analysis into an executive summary + recommendations |
 | `utils/export_report.py` | Builds the PDF entirely in memory using ReportLab |
-| `utils/db.py` | SQLite schema — `users`, `upload_history`, `app_settings` |
+| `utils/db.py` | MySQL schema — `users`, `upload_history`, `app_settings` |
 
 **Why IQR over Isolation Forest:** IQR is pure math with no heavy ML dependency, and works reliably for statistical outliers across healthcare, sales, and financial datasets.
 
-**Why in-memory PDF generation:** Render's filesystem is ephemeral — anything written to disk is lost on redeploy. PDFs are built directly into a `BytesIO` buffer and stored as a BLOB in SQLite, so downloads are served straight from the database.
+**Why in-memory PDF generation:** Render's filesystem is ephemeral — anything written to disk is lost on redeploy. PDFs are built directly into a `BytesIO` buffer and stored as a BLOB in MySQL, so downloads are served straight from the database.
 
 ---
 
