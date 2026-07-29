@@ -22,6 +22,7 @@
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
 - [Core Engines](#core-engines)
+- [Project Structure](#Project-Structure)
 - [Module Breakdown](#module-breakdown)
 - [Authentication](#authentication)
 - [Deployment](#deployment)
