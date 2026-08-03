@@ -7,7 +7,8 @@ from utils.nlp_model import run_nlp_analysis
 from utils.dl_model import run_dl_analysis
 from utils.db import (save_upload_history, get_upload_history,
                       check_existing_upload, save_user_settings, get_user_settings,
-                      save_reset_token, get_user_by_reset_token, update_user_password)
+                      save_reset_token, get_user_by_reset_token, update_user_password,
+                      init_db)
 from utils.breakdown import generate_structured_breakdown
 from werkzeug.security import generate_password_hash, check_password_hash
 from utils.db import get_db_connection
@@ -26,11 +27,12 @@ import secrets
 from datetime import datetime, timedelta
 from authlib.integrations.flask_client import OAuth
 import resend
-import mysql.connector
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "9945")
 resend.api_key = os.environ.get("RESEND_API_KEY")
+
+init_db()
 
 oauth = OAuth(app)
 google = oauth.register(
@@ -419,19 +421,17 @@ def history():
 
     conn = get_db_connection()
 
-    cursor = conn.cursor(
-        dictionary=True
-    )
+    cursor = conn.cursor()
 
     if q:
 
         cursor.execute("""
             SELECT * FROM upload_history
-            WHERE user_id = %s
+            WHERE user_id = ?
             AND (
-                file_name LIKE %s
-                OR file_type LIKE %s
-                OR insights LIKE %s
+                file_name LIKE ?
+                OR file_type LIKE ?
+                OR insights LIKE ?
             )
             ORDER BY id DESC
         """, (
@@ -445,13 +445,11 @@ def history():
 
         cursor.execute("""
             SELECT * FROM upload_history
-            WHERE user_id = %s
+            WHERE user_id = ?
             ORDER BY id DESC
         """, (session['user_id'],))
 
-    records = cursor.fetchall()
-
-    cursor.close()
+    records = [dict(row) for row in cursor.fetchall()]
 
     conn.close()
 
@@ -468,7 +466,7 @@ def history():
 def view_report(report_id):
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     cursor.execute("""
         SELECT
@@ -487,12 +485,11 @@ def view_report(report_id):
             pdf_report
 
         FROM upload_history
-        WHERE id = %s
+        WHERE id = ?
     """, (report_id,))
 
     report = cursor.fetchone()
 
-    cursor.close()
     conn.close()
 
     if not report:
@@ -500,6 +497,8 @@ def view_report(report_id):
         flash("Report not found.", "danger")
 
         return redirect(url_for('history'))
+
+    report = dict(report)
 
     chart_paths = {}
     chart_path = None
@@ -570,7 +569,7 @@ def download_report(report_id):
 
     conn = get_db_connection()
 
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     cursor.execute("""
 
@@ -580,13 +579,11 @@ def download_report(report_id):
 
         FROM upload_history
 
-        WHERE id = %s
+        WHERE id = ?
 
     """, (report_id,))
 
     report = cursor.fetchone()
-
-    cursor.close()
 
     conn.close()
 
@@ -721,12 +718,12 @@ def register():
         )
 
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
 
         cursor.execute("""
             SELECT *
             FROM users
-            WHERE email = %s
+            WHERE email = ?
         """, (email,))
 
         existing_user = cursor.fetchone()
@@ -738,7 +735,6 @@ def register():
                 "danger"
             )
 
-            cursor.close()
             conn.close()
 
             return redirect(url_for('register'))
@@ -747,7 +743,7 @@ def register():
             INSERT INTO users
             (username, email, password)
 
-            VALUES (%s, %s, %s)
+            VALUES (?, ?, ?)
         """, (
             username,
             email,
@@ -756,7 +752,6 @@ def register():
 
         conn.commit()
 
-        cursor.close()
         conn.close()
 
         flash(
@@ -781,17 +776,16 @@ def login():
         password = request.form['password']
 
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
 
         cursor.execute("""
             SELECT *
             FROM users
-            WHERE email = %s
+            WHERE email = ?
         """, (email,))
 
         user = cursor.fetchone()
 
-        cursor.close()
         conn.close()
 
         if user and check_password_hash(
@@ -955,20 +949,19 @@ def google_callback():
             return redirect(url_for('login'))
 
         conn   = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
         user = cursor.fetchone()
 
         if not user:
             cursor.execute(
-                "INSERT INTO users (username, email, password) VALUES (%s, %s, %s)",
+                "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
                 (name, email, generate_password_hash(os.urandom(32).hex()))
             )
             conn.commit()
-            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+            cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
             user = cursor.fetchone()
 
-        cursor.close()
         conn.close()
 
         session['user_id']  = user['id']        # ← works because of row_factory
