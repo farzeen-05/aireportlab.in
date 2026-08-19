@@ -1,5 +1,30 @@
 import sqlite3
 import os
+from datetime import datetime
+
+
+# =========================
+# DATETIME <-> SQLite TEXT
+# =========================
+def _convert_datetime(raw):
+    """SQLite stores DATETIME columns as TEXT; parse them back into datetime objects."""
+    if raw is None:
+        return None
+    text = raw.decode("utf-8") if isinstance(raw, (bytes, bytearray)) else raw
+    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    return text  # unparsable — return raw rather than crash
+
+
+def _adapt_datetime(dt):
+    return dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+
+
+sqlite3.register_converter("DATETIME", _convert_datetime)
+sqlite3.register_adapter(datetime, _adapt_datetime)
 
 
 # =========================
@@ -9,7 +34,11 @@ DB_PATH = os.environ.get("SQLITE_DB_PATH", "aireportlab.db")
 
 
 def get_db_connection():
-    conn = sqlite3.connect(DB_PATH, timeout=30)
+    conn = sqlite3.connect(
+        DB_PATH,
+        timeout=30,
+        detect_types=sqlite3.PARSE_DECLTYPES,
+    )
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
