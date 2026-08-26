@@ -30,6 +30,9 @@ sqlite3.register_adapter(datetime, _adapt_datetime)
 # =========================
 # DB CONNECTION
 # =========================
+# NOTE: if this stays a relative path, Render's ephemeral filesystem wipes it
+# on every deploy. Set SQLITE_DB_PATH to a path inside a mounted persistent
+# disk (Render dashboard -> your service -> Disks) to survive deploys.
 DB_PATH = os.environ.get("SQLITE_DB_PATH", "aireportlab.db")
 
 
@@ -96,6 +99,24 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_token);
     """)
     conn.close()
+
+
+# =========================
+# USER HELPERS
+# =========================
+
+def user_exists(user_id):
+    """
+    Verify a user_id from the session still has a matching row in `users`.
+    Guards against stale sessions after a DB reset (e.g. ephemeral disk
+    wiped on redeploy) causing FOREIGN KEY failures on insert.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM users WHERE id = ?", (user_id,))
+    exists = cursor.fetchone() is not None
+    conn.close()
+    return exists
 
 
 # =========================
