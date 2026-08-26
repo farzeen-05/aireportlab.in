@@ -8,7 +8,7 @@ from utils.dl_model import run_dl_analysis
 from utils.db import (save_upload_history, get_upload_history,
                       check_existing_upload, save_user_settings, get_user_settings,
                       save_reset_token, get_user_by_reset_token, update_user_password,
-                      init_db)
+                      init_db, user_exists)
 from utils.breakdown import generate_structured_breakdown
 from werkzeug.security import generate_password_hash, check_password_hash
 from utils.db import get_db_connection
@@ -23,6 +23,7 @@ import time
 import os
 import io
 import json
+import sqlite3
 import secrets
 from datetime import datetime, timedelta
 from authlib.integrations.flask_client import OAuth
@@ -59,6 +60,13 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             flash("Please login first", "warning")
+            return redirect(url_for('login'))
+        if not user_exists(session['user_id']):
+            # Session refers to a user_id that no longer exists in the DB
+            # (e.g. ephemeral DB was reset on redeploy). Force re-login
+            # instead of letting downstream inserts fail on FK constraints.
+            session.clear()
+            flash("Your session expired. Please log in again.", "warning")
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -361,23 +369,34 @@ def upload():
             )
 
             # ── Save to DB ────────────────────────────────────────────────────
-            report_id = save_upload_history(
-                session['user_id'],
-                file.filename,
-                file_size,
-                file_type,
-                final_report.get("executive_summary"),
-                " || ".join(final_report.get("key_insights", []))
-                    if final_report.get("key_insights") else None,
-                " || ".join(final_report.get("recommendations", []))
-                    if final_report.get("recommendations") else None,
-                json.dumps(chart_paths) if isinstance(chart_paths, dict) else chart_paths,
-                _serialize_breakdown(structured_breakdown, file_type),
-                ml_output.get("ml_result")                if ml_output  else None,
-                ", ".join(nlp_output.get("keywords", [])) if nlp_output else None,
-                dl_output.get("dl_summary")               if dl_output  else None,
-                pdf_report
-            )
+            try:
+                report_id = save_upload_history(
+                    session['user_id'],
+                    file.filename,
+                    file_size,
+                    file_type,
+                    final_report.get("executive_summary"),
+                    " || ".join(final_report.get("key_insights", []))
+                        if final_report.get("key_insights") else None,
+                    " || ".join(final_report.get("recommendations", []))
+                        if final_report.get("recommendations") else None,
+                    json.dumps(chart_paths) if isinstance(chart_paths, dict) else chart_paths,
+                    _serialize_breakdown(structured_breakdown, file_type),
+                    ml_output.get("ml_result")                if ml_output  else None,
+                    ", ".join(nlp_output.get("keywords", [])) if nlp_output else None,
+                    dl_output.get("dl_summary")               if dl_output  else None,
+                    pdf_report
+                )
+            except sqlite3.IntegrityError:
+                # session['user_id'] no longer has a matching row in `users`
+                # (stale session after a DB reset). Force re-login rather
+                # than surfacing a raw FK error to the user.
+                app.logger.warning(
+                    f"Stale user_id={session.get('user_id')} on upload — clearing session"
+                )
+                session.clear()
+                flash("Your session was invalid. Please log in again and re-upload.", "warning")
+                return redirect(url_for('login'))
 
             return render_template(
                 'report.html',
