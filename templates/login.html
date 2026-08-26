@@ -13,20 +13,6 @@
     overflow: hidden;
   }
 
-  .auth-orb { position: fixed; border-radius: 50%; filter: blur(130px); pointer-events: none; z-index: 0; }
-  .auth-orb-1 { width: 600px; height: 600px; background: rgba(59,130,246,0.1);  top: -200px; left: -200px; }
-  .auth-orb-2 { width: 400px; height: 400px; background: rgba(167,139,250,0.07); bottom: -100px; right: -100px; }
-
-  .auth-grid {
-    position: fixed; inset: 0;
-    background-image:
-      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-    background-size: 60px 60px;
-    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black, transparent);
-    z-index: 0;
-  }
-
   /* Left panel */
   .auth-left {
     display: none; flex: 1; flex-direction: column;
@@ -70,7 +56,7 @@
   .auth-mobile-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: adot 2s ease-in-out infinite; }
 
   /* Card */
-  .auth-card { width: 100%; max-width: 400px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 2.5rem 2rem; box-shadow: 0 24px 80px rgba(0,0,0,0.5); animation: fadeUp 0.4s ease both; }
+  .auth-card { width: 100%; max-width: 400px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2.5rem 2rem; box-shadow: var(--shadow-lg); animation: fadeUp 0.4s ease both; }
   @keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
 
   .auth-card-eyebrow { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem; }
@@ -78,9 +64,9 @@
   .auth-card-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.75rem; }
 
   .auth-flash { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.7rem 0.9rem; border-radius: 8px; border: 1px solid; font-size: 0.82rem; margin-bottom: 1.25rem; }
-  .auth-flash-danger  { background: rgba(239,68,68,0.08);  border-color: rgba(239,68,68,0.25);  color: #f87171; }
-  .auth-flash-success { background: rgba(34,197,94,0.08);  border-color: rgba(34,197,94,0.25);  color: #4ade80; }
-  .auth-flash-info    { background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.25); color: #60a5fa; }
+  .auth-flash-danger  { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+  .auth-flash-success { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+  .auth-flash-info    { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
 
   .auth-form-group { margin-bottom: 1.1rem; }
   .auth-label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--text2); margin-bottom: 0.45rem; letter-spacing: 0.02em; }
@@ -102,8 +88,8 @@
   .auth-forgot { color: var(--accent2); text-decoration: none; transition: color 0.2s; }
   .auth-forgot:hover { color: var(--accent); }
 
-  .auth-submit { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.72rem 1.5rem; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-family: var(--font-body); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 0 24px rgba(59,130,246,0.3); }
-  .auth-submit:hover { background: var(--accent2); box-shadow: 0 0 36px rgba(59,130,246,0.45); transform: translateY(-1px); }
+  .auth-submit { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.72rem 1.5rem; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-family: var(--font-body); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
+  .auth-submit:hover { background: var(--accent2); transform: translateY(-1px); }
 
   .auth-footer-link { text-align: center; font-size: 0.83rem; color: var(--muted); margin-top: 1.5rem; }
   .auth-footer-link a { color: var(--accent2); text-decoration: none; font-weight: 600; transition: color 0.2s; }
@@ -115,10 +101,6 @@
 {% block app_shell %}
 
   <div class="auth-page">
-    <div class="auth-orb auth-orb-1"></div>
-    <div class="auth-orb auth-orb-2"></div>
-    <div class="auth-grid"></div>
-
     <!-- LEFT PANEL -->
     <div class="auth-left">
       <a href="{{ url_for('landing') }}" class="auth-brand">
