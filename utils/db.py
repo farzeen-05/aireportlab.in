@@ -39,10 +39,14 @@ def get_db_connection():
         timeout=30,
         detect_types=sqlite3.PARSE_DECLTYPES,
     )
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
 
+    conn.row_factory = sqlite3.Row
+
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 30000")
+
+    return conn
 
 # =========================
 # DB INITIALIZATION
