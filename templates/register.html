@@ -15,27 +15,6 @@
     overflow: hidden;
   }
 
-  .auth-orb {
-    position: fixed;
-    border-radius: 50%;
-    filter: blur(130px);
-    pointer-events: none;
-    z-index: 0;
-  }
-  .auth-orb-1 { width: 600px; height: 600px; background: rgba(59,130,246,0.1);  top: -200px; right: -200px; }
-  .auth-orb-2 { width: 400px; height: 400px; background: rgba(167,139,250,0.07); bottom: -100px; left: -100px; }
-
-  .auth-grid {
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-    background-size: 60px 60px;
-    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black, transparent);
-    z-index: 0;
-  }
-
   /* ── Left panel ── */
   .auth-left {
     display: none;
@@ -90,10 +69,7 @@
   }
 
   .auth-left-title .grad {
-    background: linear-gradient(135deg, var(--accent), var(--purple));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--accent);
   }
 
   .auth-left-sub {
@@ -145,7 +121,7 @@
   .auth-testimonial-avatar {
     width: 30px; height: 30px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--purple));
+    background: var(--accent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -205,9 +181,9 @@
     max-width: 420px;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 16px;
+    border-radius: 12px;
     padding: 2.5rem 2rem;
-    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    box-shadow: var(--shadow-lg);
   }
 
   .auth-card-header { margin-bottom: 1.75rem; }
@@ -244,9 +220,9 @@
     margin-bottom: 1.25rem;
   }
 
-  .auth-flash-danger  { background: rgba(239,68,68,0.08);  border-color: rgba(239,68,68,0.25);  color: #f87171; }
-  .auth-flash-success { background: rgba(34,197,94,0.08);  border-color: rgba(34,197,94,0.25);  color: #4ade80; }
-  .auth-flash-info    { background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.25); color: #60a5fa; }
+  .auth-flash-danger  { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+  .auth-flash-success { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+  .auth-flash-info    { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
 
   /* Form */
   .auth-form-row {
@@ -378,14 +354,12 @@
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 0 24px rgba(59,130,246,0.3);
+    transition: all 0.15s ease;
     letter-spacing: 0.01em;
   }
 
   .auth-submit:hover {
     background: var(--accent2);
-    box-shadow: 0 0 36px rgba(59,130,246,0.45);
     transform: translateY(-1px);
   }
 
@@ -407,9 +381,9 @@
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    background: rgba(34,197,94,0.1);
-    border: 1px solid rgba(34,197,94,0.25);
-    color: #4ade80;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #15803d;
     font-size: 0.7rem;
     font-weight: 700;
     padding: 0.2rem 0.6rem;
@@ -419,7 +393,7 @@
     margin-bottom: 0.75rem;
   }
 
-  .auth-free-badge .dot { width: 5px; height: 5px; border-radius: 50%; background: #4ade80; }
+  .auth-free-badge .dot { width: 5px; height: 5px; border-radius: 50%; background: #15803d; }
 
 {% endblock %}
 
@@ -427,10 +401,6 @@
 {% block app_shell %}
 
   <div class="auth-page">
-    <div class="auth-orb auth-orb-1"></div>
-    <div class="auth-orb auth-orb-2"></div>
-    <div class="auth-grid"></div>
-
     <!-- LEFT PANEL -->
     <div class="auth-left">
       <a href="{{ url_for('landing') }}" class="auth-brand">
