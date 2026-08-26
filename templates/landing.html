@@ -4,17 +4,6 @@
 {% block meta_desc %}AI-powered document and dataset intelligence platform for automated analysis, visualization, anomaly detection, and smart reporting.{% endblock %}
 
 {% block extra_styles %}
-  /* ─── NOISE OVERLAY ─── */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 1000;
-    opacity: 0.4;
-  }
-
   /* ─── NAVBAR ─── */
   .l-nav {
     position: fixed;
@@ -24,8 +13,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 1.1rem 4rem;
-    background: rgba(5,7,15,0.72);
-    backdrop-filter: blur(18px);
+    background: var(--bg);
     border-bottom: 1px solid var(--border);
   }
 
@@ -96,17 +84,15 @@
     border: 1px solid var(--border);
   }
 
-  .l-btn-ghost:hover { background: var(--surface); color: var(--text); border-color: rgba(255,255,255,0.14); }
+  .l-btn-ghost:hover { background: var(--surface); color: var(--text); border-color: var(--border2); }
 
   .l-btn-primary {
     background: var(--accent);
     color: #fff;
-    box-shadow: 0 0 24px rgba(59,130,246,0.35);
   }
 
   .l-btn-primary:hover {
     background: var(--accent2);
-    box-shadow: 0 0 36px rgba(59,130,246,0.5);
     transform: translateY(-1px);
   }
 
@@ -121,27 +107,6 @@
     padding: 7rem 2rem 4rem;
     position: relative;
     overflow: hidden;
-  }
-
-  .l-orb {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(120px);
-    pointer-events: none;
-  }
-
-  .l-orb-1 { width: 700px; height: 700px; background: rgba(59,130,246,0.12); top: -200px; left: -200px; }
-  .l-orb-2 { width: 500px; height: 500px; background: rgba(167,139,250,0.08); bottom: -100px; right: -100px; }
-  .l-orb-3 { width: 300px; height: 300px; background: rgba(34,197,94,0.06); top: 40%; left: 55%; }
-
-  .l-grid-overlay {
-    position: absolute;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
-    background-size: 60px 60px;
-    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black, transparent);
   }
 
   .l-hero-inner {
@@ -189,10 +154,7 @@
 }
 
   .l-hero h1 .highlight {
-    background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--accent);
   }
 
   .l-hero-sub {
@@ -230,19 +192,12 @@
     animation: lfadeUp 0.8s 0.5s ease both;
   }
 
-  .l-mockup-glow {
-    position: absolute;
-    inset: -40px;
-    background: radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.15), transparent 70%);
-    pointer-events: none;
-  }
-
   .l-mockup {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 14px;
     overflow: hidden;
-    box-shadow: 0 40px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+    box-shadow: 0 1px 3px rgba(15,23,42,0.04), 0 24px 64px rgba(15,23,42,0.10);
     position: relative;
   }
 
@@ -359,9 +314,9 @@
   }
 
   .l-feature-card:hover {
-    border-color: rgba(59,130,246,0.3);
+    border-color: var(--border2);
     transform: translateY(-4px);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 30px rgba(59,130,246,0.07);
+    box-shadow: 0 1px 3px rgba(15,23,42,0.04), 0 16px 40px rgba(15,23,42,0.08);
   }
 
   .l-feature-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; font-size: 1.25rem; }
@@ -390,7 +345,7 @@
     position: absolute;
     top: 28px; left: 10%; right: 10%;
     height: 1px;
-    background: linear-gradient(90deg, transparent, var(--accent), var(--purple), transparent);
+    background: var(--border2);
     z-index: 0;
   }
 
@@ -416,7 +371,7 @@
 
   /* ─── STATS ─── */
   .l-stats-bar {
-    background: linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(167,139,250,0.06) 100%);
+    background: var(--bg2);
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
     padding: 3.5rem 2rem;
@@ -429,27 +384,13 @@
     font-size: 2.5rem;
     font-weight: 800;
     letter-spacing: -0.03em;
-    background: linear-gradient(135deg, var(--accent), var(--purple));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--accent);
   }
 
   .l-stat-label { font-size: 0.85rem; color: var(--muted); margin-top: 0.25rem; }
 
   /* ─── CTA ─── */
   .l-cta-section { padding: 7rem 2rem; text-align: center; position: relative; overflow: hidden; }
-
-  .l-cta-orb {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(120px);
-    pointer-events: none;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 600px; height: 600px;
-    background: rgba(59,130,246,0.08);
-  }
 
   .l-cta-inner { position: relative; z-index: 2; max-width: 600px; margin: 0 auto; }
 
@@ -801,7 +742,7 @@
   <nav class="l-nav">
     <a href="#" class="l-nav-logo">
       <span class="dot"></span>
-      aire<span>port</span>lab
+      ai<span>report</span>lab
     </a>
     <ul class="l-nav-links">
       <li><a href="#l-features">Features</a></li>
@@ -816,11 +757,6 @@
 
   <!-- HERO -->
   <div class="l-hero">
-    <div class="l-orb l-orb-1"></div>
-    <div class="l-orb l-orb-2"></div>
-    <div class="l-orb l-orb-3"></div>
-    <div class="l-grid-overlay"></div>
-
     <div class="l-hero-inner">
       <div class="l-badge-pill">
         <span class="blink"></span>
@@ -851,7 +787,6 @@
   <!-- MOCKUP -->
   <div style="padding: 0 2rem 5rem; background: var(--bg);">
     <div class="l-mockup-wrap l-reveal">
-      <div class="l-mockup-glow"></div>
       <div class="l-mockup">
         <div class="l-mockup-bar">
           <div class="l-mockup-dot" style="background:#ff5f57;"></div>
@@ -906,7 +841,7 @@
                     <rect x="148" y="10" width="20" height="95" fill="url(#bar-grad)" rx="3"/>
                     <rect x="176" y="25" width="20" height="80" fill="url(#bar-grad)" rx="3"/>
                   </g>
-                  <line x1="0" y1="105" x2="220" y2="105" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+                  <line x1="0" y1="105" x2="220" y2="105" stroke="rgba(15,23,42,0.08)" stroke-width="1"/>
                 </svg>
               </div>
               <div class="l-mockup-chart">
@@ -959,42 +894,42 @@
         <div class="l-feature-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">📊</div>
         <h3>Smart Data Analysis</h3>
         <p>Automatically clean, parse, and analyze structured data. Get statistical summaries, outlier detection, and data quality scores instantly.</p>
-        <span class="l-tag" style="background:rgba(59,130,246,0.1);color:#60a5fa;">ML-Powered</span>
+        <span class="l-tag" style="background:#eff6ff;color:#1d4ed8;">ML-Powered</span>
       </div>
 
       <div class="l-feature-card l-reveal">
         <div class="l-feature-icon" style="background:rgba(34,197,94,0.12);color:#22c55e;">📈</div>
         <h3>Visual Insights</h3>
         <p>Dynamic charts, trend lines, heatmaps, and interactive dashboards generated automatically from your uploaded data.</p>
-        <span class="l-tag" style="background:rgba(34,197,94,0.1);color:#4ade80;">Auto-Generated</span>
+        <span class="l-tag" style="background:#f0fdf4;color:#15803d;">Auto-Generated</span>
       </div>
 
       <div class="l-feature-card l-reveal">
         <div class="l-feature-icon" style="background:rgba(167,139,250,0.12);color:#a78bfa;">🧠</div>
         <h3>AI Report Generation</h3>
         <p>Natural language summaries and executive reports generated from your data using advanced NLP — ready to share in seconds.</p>
-        <span class="l-tag" style="background:rgba(167,139,250,0.1);color:#c4b5fd;">NLP</span>
+        <span class="l-tag" style="background:#f5f3ff;color:#6d28d9;">NLP</span>
       </div>
 
       <div class="l-feature-card l-reveal">
         <div class="l-feature-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;">⚡</div>
         <h3>Anomaly Detection</h3>
         <p>Automatically identify unusual patterns, data spikes, missing values, and statistical outliers that matter most to your analysis.</p>
-        <span class="l-tag" style="background:rgba(245,158,11,0.1);color:#fcd34d;">Deep Learning</span>
+        <span class="l-tag" style="background:#fffbeb;color:#92400e;">Deep Learning</span>
       </div>
 
       <div class="l-feature-card l-reveal">
         <div class="l-feature-icon" style="background:rgba(239,68,68,0.12);color:#ef4444;">📄</div>
         <h3>Document Intelligence</h3>
         <p>Extract, summarize, and analyze text from PDFs and DOCX files. Understand documents without reading every line.</p>
-        <span class="l-tag" style="background:rgba(239,68,68,0.1);color:#f87171;">OCR + NLP</span>
+        <span class="l-tag" style="background:#fef2f2;color:#b91c1c;">OCR + NLP</span>
       </div>
 
       <div class="l-feature-card l-reveal">
         <div class="l-feature-icon" style="background:rgba(20,184,166,0.12);color:#14b8a6;">📤</div>
         <h3>Export & History</h3>
         <p>All your reports are saved with full history. Export findings, share dashboards, and track every analysis over time.</p>
-        <span class="l-tag" style="background:rgba(20,184,166,0.1);color:#2dd4bf;">Full History</span>
+        <span class="l-tag" style="background:#f0fdfa;color:#0f766e;">Full History</span>
       </div>
 
     </div>
@@ -1058,7 +993,6 @@
 
   <!-- CTA -->
   <div class="l-cta-section">
-    <div class="l-cta-orb"></div>
     <div class="l-cta-inner l-reveal">
       <h2>Ready to unlock your<br/>document intelligence?</h2>
       <p>Join thousands of analysts, data teams, and researchers using aireportlab to transform raw files into insights.</p>
