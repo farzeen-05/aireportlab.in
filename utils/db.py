@@ -30,9 +30,6 @@ sqlite3.register_adapter(datetime, _adapt_datetime)
 # =========================
 # DB CONNECTION
 # =========================
-# NOTE: if this stays a relative path, Render's ephemeral filesystem wipes it
-# on every deploy. Set SQLITE_DB_PATH to a path inside a mounted persistent
-# disk (Render dashboard -> your service -> Disks) to survive deploys.
 DB_PATH = os.environ.get("SQLITE_DB_PATH", "aireportlab.db")
 
 
@@ -42,14 +39,10 @@ def get_db_connection():
         timeout=30,
         detect_types=sqlite3.PARSE_DECLTYPES,
     )
-
     conn.row_factory = sqlite3.Row
-
     conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA journal_mode = WAL")
-    conn.execute("PRAGMA busy_timeout = 30000")
-
     return conn
+
 
 # =========================
 # DB INITIALIZATION
@@ -102,21 +95,27 @@ def init_db():
 
 
 # =========================
-# USER HELPERS
+# USER LOOKUP
 # =========================
 
 def user_exists(user_id):
-    """
-    Verify a user_id from the session still has a matching row in `users`.
-    Guards against stale sessions after a DB reset (e.g. ephemeral disk
-    wiped on redeploy) causing FOREIGN KEY failures on insert.
-    """
+
     conn = get_db_connection()
+
     cursor = conn.cursor()
-    cursor.execute("SELECT 1 FROM users WHERE id = ?", (user_id,))
-    exists = cursor.fetchone() is not None
+
+    cursor.execute("""
+        SELECT 1
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+    """, (user_id,))
+
+    result = cursor.fetchone()
+
     conn.close()
-    return exists
+
+    return result is not None
 
 
 # =========================
