@@ -1,16 +1,17 @@
-# 📊 aireportlab — AI-Powered Document & Dataset Analysis Platforms
+# 📊 aireportlab — AI-Powered Document & Dataset Analysis Platform
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
 ![Flask](https://img.shields.io/badge/Flask-Backend-000000?logo=flask)
-![MySQL](https://img.shields.io/badge/MySQL-Database-4479A1?logo=mysql&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?logo=sqlite&logoColor=white)
 ![Scikit-learn](https://img.shields.io/badge/Scikit--learn-ML-F7931E?logo=scikitlearn)
 ![NLTK](https://img.shields.io/badge/NLTK-NLP-green)
+![Groq](https://img.shields.io/badge/Groq-LLM%20Q%26A-F55036)
 ![ReportLab](https://img.shields.io/badge/ReportLab-PDF%20Export-red)
 ![OAuth](https://img.shields.io/badge/Google-OAuth%202.0-4285F4?logo=google)
 ![Render](https://img.shields.io/badge/Deployed%20on-Render-46E3B7?logo=render)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-> Upload any CSV, Excel, PDF, DOCX, JSON, or TXT file and instantly get a professional, AI-generated analytical report — 15+ auto-selected visualizations, NLP keyword extraction, ML anomaly detection, and a downloadable PDF. No coding required.
+> Upload any CSV, Excel, PDF, DOCX, JSON, or TXT file and instantly get a professional, AI-generated analytical report — 15+ auto-selected visualizations, NLP keyword extraction, ML anomaly detection, a Groq-powered AI chat to ask follow-up questions about your data, and a downloadable PDF. No coding required.
 
 🔗 **Live Demo:** [https://aireportlab-in-hzxn.onrender.com/](https://aireportlab-in-hzxn.onrender.com/)
 
@@ -22,6 +23,7 @@
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
 - [Core Engines](#core-engines)
+- [AI Q&A & Chat](#ai-qa--chat)
 - [Project Structure](#Project-Structure)
 - [Module Breakdown](#module-breakdown)
 - [Authentication](#authentication)
@@ -42,6 +44,8 @@ Most data analysis tools require a user to already know how to code. **aireportl
 - Generates 15+ context-aware visualizations
 - Runs domain-aware NLP analysis on documents (9 domain templates: academic, research, business, legal, medical, security, financial, technical, resume)
 - Detects statistical anomalies in tabular data
+- Generates a dual executive summary — an AI-written version (Groq) alongside the template-based one, toggleable side by side
+- Lets you ask free-form follow-up questions about your data or document through an AI chat, on both a fresh upload and any previously saved report
 - Exports a complete PDF report, stored directly in the database
 - Supports Google OAuth and email/password authentication
 
@@ -73,13 +77,16 @@ User uploads file (CSV / Excel / PDF / DOCX / JSON / TXT)
       Visualization Engine → 15+ charts
               │
               ▼
-      Report Generator → executive summary
+      Report Generator → dual executive summary (AI + template)
               │
               ▼
       PDF Export (ReportLab, in-memory)
               │
               ▼
-      Saved as BLOB in MySQL → served to user
+      Saved as BLOB in SQLite → served to user
+              │
+              ▼
+      AI Chat (Groq) → ask follow-up questions anytime
 ```
 
 ---
@@ -89,11 +96,12 @@ User uploads file (CSV / Excel / PDF / DOCX / JSON / TXT)
 | Layer | Technology |
 |-------|-----------|
 | Backend | Flask, Gunicorn |
-| Database | MySQL |
+| Database | SQLite |
 | Data Processing | Pandas, NumPy |
 | Visualization | Matplotlib, Seaborn |
 | Machine Learning | Scikit-learn, IQR-based anomaly detection |
 | NLP | NLTK, custom TF-IDF implementation |
+| LLM / Chat | Groq API (`openai/gpt-oss-20b`) |
 | PDF Generation | ReportLab (in-memory, no disk writes) |
 | Authentication | Authlib (Google OAuth 2.0), Werkzeug (bcrypt password hashing) |
 | Email | Resend API |
@@ -129,10 +137,30 @@ For PDF/DOCX/TXT/JSON documents:
 - **Sentiment analysis** via curated positive/negative word lists
 - **Domain-aware summary generation** — different templates per document type
 
+### 🤖 LLM Q&A Engine (Groq-powered)
+Wraps the Groq API to add a conversational layer on top of the template-based analysis:
+- **Dual executive summaries** — an AI-generated summary alongside the deterministic template one, so results stay explainable even when the AI call fails or is disabled
+- **Suggested questions** generated per report to jump-start the conversation
+- **Context-aware chat** — grounded in the actual extracted text or dataset summary, not a generic prompt, with the last 6 turns of conversation history sent per request
+- **Two entry points** — live chat on a report right after upload, and chat on any previously saved report pulled back from the database
+
+---
+
+## AI Q&A & Chat
+
+Every generated report includes an **"Ask AI About This Dataset/Document"** panel:
+
+- Type a free-form question, or tap one of the AI-suggested starter questions
+- Answers come back with a confidence indicator (✓ Confident / ⚠ Low confidence)
+- Works two ways depending on where you are:
+  - **`/api/qna`** — on a report you just generated, grounded in the live extracted text/data
+  - **`/api/qna/<report_id>`** — on any report pulled from History, grounded in what was saved to the database (summary, key insights, recommendations, keywords)
+- The executive summary itself is dual-mode — toggle between the **🤖 AI** version and the **📋 Template** version to compare
+
 ---
 
 ## 📁 Project Structure
- 
+
 ```
 aireportlab.in/
 │
@@ -145,7 +173,8 @@ aireportlab.in/
 ├── utils/
 │   ├── file_reader.py          # Multi-format file extraction
 │   ├── preprocess.py           # Data cleaning & preprocessing
-│   ├── insights.py             # AI insight generation
+│   ├── insights.py             # AI insight generation (template + LLM)
+│   ├── llm_engine.py           # Groq API wrapper — summaries, Q&A, suggested questions
 │   ├── breakdown.py            # Column/page breakdown summaries
 │   ├── ml_model.py             # Anomaly detection
 │   ├── nlp_model.py            # NLP analysis
@@ -174,9 +203,9 @@ aireportlab.in/
 │   ├── js/
 │   └── img/
 │
-└── database.db                 # MySQL database
+└── database.db                 # SQLite database
 ```
- 
+
 ---
 
 ## Module Breakdown
@@ -189,13 +218,14 @@ aireportlab.in/
 | `text_analysis_engine.py` | Domain detection, TF-IDF, keyphrases, structure, readability, sentiment |
 | `utils/ml_model.py` | IQR-based anomaly detection for tabular data |
 | `utils/nlp_model.py` | Runs TextAnalysisEngine for text files |
+| `utils/llm_engine.py` | Groq wrapper: dual summaries, suggested questions, chat Q&A |
 | `utils/report_generator.py` | Combines all analysis into an executive summary + recommendations |
 | `utils/export_report.py` | Builds the PDF entirely in memory using ReportLab |
-| `utils/db.py` | MySQL schema — `users`, `upload_history`, `app_settings` |
+| `utils/db.py` | SQLite schema — `users`, `upload_history`, `app_settings` |
 
 **Why IQR over Isolation Forest:** IQR is pure math with no heavy ML dependency, and works reliably for statistical outliers across healthcare, sales, and financial datasets.
 
-**Why in-memory PDF generation:** Render's filesystem is ephemeral — anything written to disk is lost on redeploy. PDFs are built directly into a `BytesIO` buffer and stored as a BLOB in MySQL, so downloads are served straight from the database.
+**Why in-memory PDF generation:** Render's filesystem is ephemeral — anything written to disk is lost on redeploy. PDFs are built directly into a `BytesIO` buffer and stored as a BLOB in SQLite, so downloads are served straight from the database.
 
 ---
 
@@ -204,6 +234,7 @@ aireportlab.in/
 - **Email/Password** — passwords hashed with Werkzeug's `generate_password_hash` (bcrypt), never stored in plain text
 - **Google OAuth 2.0** — handled via Authlib; auto-creates an account for new users and stores their profile picture in session
 - **Forgot Password** — 32-byte secure token via `secrets.token_urlsafe`, 1-hour expiry, reset link sent through the Resend API
+- **Stale-session recovery** — since the database resets on every redeploy (see below), a session pointing at a `user_id` that no longer exists is detected and the user is transparently signed out and asked to log back in, instead of hitting a raw foreign-key error
 
 ---
 
@@ -228,9 +259,11 @@ aireportlab.in/
 | 512MB RAM limit on Render | Dataset sampling, lower chart DPI, lazy imports, aggressive `gc.collect()` |
 | Render blocks SMTP port 587 | Switched to the Resend API over HTTPS (port 443) |
 | Chart images lost on redeploy | Charts regenerated per upload; PDFs stored permanently as DB BLOBs |
+| Ephemeral filesystem resets the SQLite DB on redeploy | `user_exists()` check in the auth decorator + a caught `IntegrityError` on upload — stale sessions are cleared and the user is re-prompted to log in, instead of a raw 500 |
 | Different file types need different pipelines | Type-detection router splits into tabular vs. text analysis paths |
 | Generic reports for all documents | Built a 9-domain-template TextAnalysisEngine |
 | TF-IDF surfacing stopwords as keywords | Custom stopword set + minimum word length filter |
+| Hosted LLM model IDs get deprecated over time | Single `MODEL` constant in `llm_engine.py` — one-line change to migrate when a provider retires a model |
 
 ---
 
@@ -261,14 +294,14 @@ aireportlab.in/
 
 ```bash
 # Clone the repository
-git clone https://github.com/farzeen-05/aireportlab.git
-cd aireportlab
+git clone https://github.com/farzeen-05/aireportlab.in.git
+cd aireportlab.in
 
 # Install dependencies
 pip install -r requirements.txt
 
 # Set environment variables (.env)
-# GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, RESEND_API_KEY, SECRET_KEY, etc.
+# GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, RESEND_API_KEY, SECRET_KEY, GROQ_API_KEY, etc.
 
 # Run the app
 python app.py
@@ -288,11 +321,10 @@ ECE Graduate | ML & Full-Stack Developer | MLOps & Cloud
 [![GitHub](https://img.shields.io/badge/GitHub-Follow-181717?logo=github)](https://github.com/farzeen-05)
 
 [![Email](https://img.shields.io/badge/Email-farzeen99453@gmail.com-EA4335?style=flat&logo=gmail)](mailto:farzeen99453@gmail.com)
- 
+
 
 ---
 
 ## License
 
 This project is licensed under the MIT License.
-
