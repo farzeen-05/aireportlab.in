@@ -40,20 +40,78 @@
   </div>
 </div>
 
-<!-- Executive Summary -->
-{% if report.insights %}
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- DUAL EXECUTIVE SUMMARY BLOCK                                           -->
+<!-- PLACEMENT: paste this to REPLACE the existing "Executive Summary" card -->
+<!-- (not above it -- this block already renders the summary; keeping     -->
+<!-- both cards would show it twice)                                       -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+{% if final_report %}
+{% set llm_summary      = final_report.get('executive_summary_llm')      if final_report is mapping else None %}
+{% set template_summary = final_report.get('executive_summary_template')  if final_report is mapping else None %}
+{% set main_summary     = final_report.get('executive_summary')           if final_report is mapping else None %}
+{% endif %}
+
+<!-- Dual Executive Summary -->
+{% if main_summary or llm_summary or template_summary %}
 <div class="card mb-3">
   <div class="card-header">
     <span class="card-title">
       <i class="bx bx-file-blank" style="color:var(--accent);margin-right:0.4rem;"></i>
       Executive Summary
     </span>
+    <!-- Toggle tabs -->
+    {% if llm_summary and template_summary %}
+    <div style="display:flex;gap:0.4rem;margin-left:auto;">
+      <button onclick="showSummary('llm')" id="btn-llm"
+        style="font-size:0.72rem;padding:0.2rem 0.7rem;border-radius:4px;
+               border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;">
+        🤖 AI
+      </button>
+      <button onclick="showSummary('template')" id="btn-template"
+        style="font-size:0.72rem;padding:0.2rem 0.7rem;border-radius:4px;
+               border:1px solid var(--border);background:transparent;
+               color:var(--text2);cursor:pointer;">
+        📋 Template
+      </button>
+    </div>
+    {% endif %}
   </div>
   <div class="card-body">
-    <p style="color:var(--text2);line-height:1.75;font-size:0.9rem;">{{ report.insights }}</p>
+    {% if llm_summary %}
+    <div id="summary-llm">
+      <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.6rem;">
+        <span style="font-size:0.68rem;padding:0.15rem 0.5rem;background:rgba(59,130,246,0.15);
+                     color:var(--accent2);border:1px solid rgba(59,130,246,0.3);border-radius:4px;">
+          🤖 AI Generated
+        </span>
+      </div>
+      <p style="color:var(--text2);line-height:1.75;font-size:0.9rem;">{{ llm_summary }}</p>
+    </div>
+    {% endif %}
+
+    {% if template_summary %}
+    <div id="summary-template" {% if llm_summary %}style="display:none;"{% endif %}>
+      <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.6rem;">
+        <span style="font-size:0.68rem;padding:0.15rem 0.5rem;background:rgba(100,100,100,0.1);
+                     color:var(--muted);border:1px solid var(--border);border-radius:4px;">
+          📋 Template Based
+        </span>
+      </div>
+      <p style="color:var(--text2);line-height:1.75;font-size:0.9rem;">{{ template_summary }}</p>
+    </div>
+    {% endif %}
+
+    {% if not llm_summary and not template_summary and main_summary %}
+    <p style="color:var(--text2);line-height:1.75;font-size:0.9rem;">{{ main_summary }}</p>
+    {% endif %}
   </div>
 </div>
 {% endif %}
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 
 <!-- Key Insights -->
 {% if report.key_insights %}
@@ -147,6 +205,97 @@
   </div>
 </div>
 {% endif %}
+
+<!-- Q&A SECTION                                                            -->
+<!-- Q&A SECTION -- paste after the Visual Dashboard section, in both        -->
+<!-- report.html and view_report.html. Resolves to /api/qna on report.html   -->
+<!-- (live) and /api/qna/<id> on view_report.html (stored) automatically,    -->
+<!-- via the `report is defined` check below.                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+<!-- computed locally: works no matter where this section lands relative
+     to Structured Breakdown, and even when structured_breakdown is empty
+     (that block's own is_tabular then never runs at all) -->
+{% set is_tabular = result.type in ('csv','excel','json_tabular') if result is defined
+                    else report.file_type in ('csv','excel','json_tabular') if report is defined
+                    else false %}
+
+<div class="card mb-3" id="qna-section">
+  <div class="card-header">
+    <span class="card-title">
+      <i class="bx bx-chat" style="color:var(--teal);margin-right:0.4rem;"></i>
+      Ask AI About This {{ 'Dataset' if is_tabular else 'Document' }}
+    </span>
+    <span style="margin-left:auto;font-size:0.72rem;padding:0.15rem 0.6rem;
+                 background:rgba(59,130,246,0.1);color:var(--accent2);
+                 border:1px solid rgba(59,130,246,0.2);border-radius:4px;">
+      Powered by Groq
+    </span>
+  </div>
+  <div class="card-body">
+
+    <!-- Suggested Questions -->
+    {% set sq = final_report.get('suggested_questions', []) if final_report is mapping else [] %}
+    {% if sq %}
+    <div style="margin-bottom:1rem;">
+      <div class="text-muted text-xs" style="margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.06em;">
+        Suggested Questions
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+        {% for q in sq %}
+        <button onclick="askSuggested(this)"
+          style="font-size:0.78rem;padding:0.3rem 0.75rem;
+                 background:var(--bg2);border:1px solid var(--border);
+                 border-radius:20px;color:var(--text2);cursor:pointer;
+                 transition:all 0.2s;"
+          onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent2)'"
+          onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
+          {{ q }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Chat messages -->
+    <div id="chat-messages" style="
+      min-height:80px;max-height:400px;overflow-y:auto;
+      margin-bottom:1rem;display:flex;flex-direction:column;gap:0.75rem;
+    "></div>
+
+    <!-- Input area -->
+    <div style="display:flex;gap:0.5rem;align-items:flex-end;">
+      <textarea id="qna-input"
+        placeholder="Ask anything about this {{ 'dataset' if is_tabular else 'document' }}..."
+        rows="2"
+        style="flex:1;resize:none;padding:0.6rem 0.85rem;
+               background:var(--bg2);border:1px solid var(--border);
+               border-radius:8px;color:var(--text);font-size:0.88rem;
+               font-family:var(--font-body);outline:none;"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendQuestion();}">
+      </textarea>
+      <button onclick="sendQuestion()" id="qna-send-btn"
+        style="padding:0.6rem 1.2rem;background:var(--accent);color:#fff;
+               border:none;border-radius:8px;cursor:pointer;
+               font-size:0.88rem;font-weight:600;white-space:nowrap;
+               transition:opacity 0.2s;">
+        <i class="bx bx-send"></i> Ask
+      </button>
+    </div>
+    <div class="text-muted text-xs" style="margin-top:0.4rem;">
+      Press Enter to send · Shift+Enter for new line
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- Q&A JAVASCRIPT                                                         -->
+<!-- Q&A JAVASCRIPT: paste inside your page's own {block scripts} tag -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+
 
 {# ── Structured Breakdown ──────────────────────────────────────────────────── #}
 {% if structured_breakdown %}
@@ -340,4 +489,172 @@
 
 {% endif %}
 
+
+{% block scripts %}
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+// report.html (live) resolves to /api/qna; view_report.html to /api/qna/<id>
+const QNA_URL      = '{{ "/api/qna/" ~ report.id if report is defined else "/api/qna" }}';
+const IS_TABULAR   = {{ 'true' if is_tabular else 'false' }};
+const FILE_TYPE    = '{{ result.type if result is defined else report.file_type if report is defined else "" }}';
+
+// Context for live Q&A (report.html only)
+{% if result is defined %}
+const QNA_CONTEXT  = {{ (processed.cleaned_text or (processed.cleaned_data.to_string() if processed.cleaned_data is defined else '')) | tojson if processed is defined else '""' }};
+const DF_SUMMARY   = {{ final_report.statistics | tojson if final_report is defined and final_report.statistics is defined else 'null' }};
+{% else %}
+const QNA_CONTEXT  = '';
+const DF_SUMMARY   = null;
+{% endif %}
+
+let chatHistory = [];
+
+function appendMessage(role, content, confidence) {
+  const container = document.getElementById('chat-messages');
+
+  const isUser = role === 'user';
+  const bubble = document.createElement('div');
+  bubble.style.cssText = `
+    display:flex;flex-direction:column;
+    align-items:${isUser ? 'flex-end' : 'flex-start'};
+    gap:0.25rem;
+  `;
+
+  const msg = document.createElement('div');
+  msg.style.cssText = `
+    max-width:85%;padding:0.65rem 0.9rem;
+    background:${isUser ? 'var(--accent)' : 'var(--bg2)'};
+    color:${isUser ? '#fff' : 'var(--text2)'};
+    border:${isUser ? 'none' : '1px solid var(--border)'};
+    border-radius:${isUser ? '12px 12px 2px 12px' : '12px 12px 12px 2px'};
+    font-size:0.86rem;line-height:1.6;
+    white-space:pre-wrap;
+  `;
+  msg.textContent = content;
+
+  bubble.appendChild(msg);
+
+  // Confidence badge for AI answers
+  if (!isUser && confidence) {
+    const badge = document.createElement('span');
+    badge.style.cssText = `
+      font-size:0.65rem;padding:0.1rem 0.4rem;border-radius:4px;
+      background:${confidence === 'high' ? 'rgba(34,197,94,0.15)' : 'rgba(251,191,36,0.15)'};
+      color:${confidence === 'high' ? 'var(--green)' : 'var(--amber)'};
+      border:1px solid ${confidence === 'high' ? 'rgba(34,197,94,0.3)' : 'rgba(251,191,36,0.3)'};
+    `;
+    badge.textContent = confidence === 'high' ? '✓ Confident' : '⚠ Low confidence';
+    bubble.appendChild(badge);
+  }
+
+  container.appendChild(bubble);
+  container.scrollTop = container.scrollHeight;
+}
+
+function appendLoading() {
+  const container = document.getElementById('chat-messages');
+  const loader = document.createElement('div');
+  loader.id = 'loading-bubble';
+  loader.style.cssText = 'display:flex;align-items:flex-start;gap:0.25rem;';
+  loader.innerHTML = `
+    <div style="padding:0.65rem 0.9rem;background:var(--bg2);
+                border:1px solid var(--border);border-radius:12px 12px 12px 2px;">
+      <span style="display:inline-flex;gap:0.3rem;align-items:center;">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);
+                     animation:bounce 0.8s infinite;"></span>
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);
+                     animation:bounce 0.8s 0.15s infinite;"></span>
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);
+                     animation:bounce 0.8s 0.3s infinite;"></span>
+      </span>
+    </div>`;
+  container.appendChild(loader);
+  container.scrollTop = container.scrollHeight;
+}
+
+async function sendQuestion() {
+  const input  = document.getElementById('qna-input');
+  const sendBtn = document.getElementById('qna-send-btn');
+  const question = input.value.trim();
+
+  if (!question) return;
+
+  // Show user message
+  appendMessage('user', question);
+  chatHistory.push({ role: 'user', content: question });
+  input.value = '';
+  sendBtn.disabled = true;
+  sendBtn.style.opacity = '0.6';
+  appendLoading();
+
+  try {
+    const payload = {
+      question:     question,
+      context:      QNA_CONTEXT,
+      file_type:    FILE_TYPE,
+      df_summary:   DF_SUMMARY,
+      chat_history: chatHistory.slice(-6),
+    };
+
+    const resp = await fetch(QNA_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+
+    const data = await resp.json();
+
+    // Remove loading bubble
+    const loader = document.getElementById('loading-bubble');
+    if (loader) loader.remove();
+
+    if (data.error) {
+      appendMessage('assistant', '⚠ ' + data.error, 'low');
+    } else {
+      appendMessage('assistant', data.answer, data.confidence);
+      chatHistory.push({ role: 'assistant', content: data.answer });
+    }
+  } catch (err) {
+    const loader = document.getElementById('loading-bubble');
+    if (loader) loader.remove();
+    appendMessage('assistant', '⚠ Failed to get response. Please try again.', 'low');
+  }
+
+  sendBtn.disabled = false;
+  sendBtn.style.opacity = '1';
+}
+
+function askSuggested(btn) {
+  document.getElementById('qna-input').value = btn.textContent.trim();
+  sendQuestion();
+}
+
+function showSummary(type) {
+  const llmDiv   = document.getElementById('summary-llm');
+  const tmpDiv   = document.getElementById('summary-template');
+  const btnLlm   = document.getElementById('btn-llm');
+  const btnTmpl  = document.getElementById('btn-template');
+
+  if (type === 'llm') {
+    if (llmDiv)  llmDiv.style.display  = '';
+    if (tmpDiv)  tmpDiv.style.display  = 'none';
+    if (btnLlm)  { btnLlm.style.background = 'var(--accent)'; btnLlm.style.color = '#fff'; btnLlm.style.border = '1px solid var(--accent)'; }
+    if (btnTmpl) { btnTmpl.style.background = 'transparent'; btnTmpl.style.color = 'var(--text2)'; btnTmpl.style.border = '1px solid var(--border)'; }
+  } else {
+    if (llmDiv)  llmDiv.style.display  = 'none';
+    if (tmpDiv)  tmpDiv.style.display  = '';
+    if (btnTmpl) { btnTmpl.style.background = 'var(--accent)'; btnTmpl.style.color = '#fff'; btnTmpl.style.border = '1px solid var(--accent)'; }
+    if (btnLlm)  { btnLlm.style.background = 'transparent'; btnLlm.style.color = 'var(--text2)'; btnLlm.style.border = '1px solid var(--border)'; }
+  }
+}
+</script>
+
+<style>
+@keyframes bounce {
+  0%, 80%, 100% { transform: translateY(0); }
+  40%            { transform: translateY(-6px); }
+}
+</style>
+
+{% endblock %}
 {% endblock %}
