@@ -428,8 +428,6 @@ def serve_chart(filename):
     return send_from_directory('static/charts', filename)
 
 
-# ─── Report placeholder ───────────────────────────────────────────────────────
-
 # ─── History ──────────────────────────────────────────────────────────────────
 
 @app.route('/history')
@@ -634,8 +632,6 @@ def download_report(report_id):
 
     filename = f"{file_name}_report.pdf"
 
-    # ─── If PDF stored as bytes ───────────────────────────────
-
     if isinstance(
         pdf_data,
         (bytes, bytearray)
@@ -657,8 +653,6 @@ def download_report(report_id):
             }
 
         )
-
-    # ─── If PDF stored as path ────────────────────────────────
 
     if (
         isinstance(pdf_data, str)
@@ -683,6 +677,111 @@ def download_report(report_id):
     return redirect(
         url_for('history')
     )
+
+
+# ─── Q&A ──────────────────────────────────────────────────────────────────────
+
+@app.route('/api/qna', methods=['POST'])
+@login_required
+def qna_live():
+    """
+    Live Q&A on the current uploaded document.
+    Called from report.html via fetch().
+    """
+    from utils.llm_engine import answer_question
+
+    data         = request.get_json()
+    question     = data.get("question", "").strip()
+    context      = data.get("context", "")       # text content
+    file_type    = data.get("file_type", "")
+    df_summary   = data.get("df_summary", None)
+    chat_history = data.get("chat_history", [])
+
+    if not question:
+        return jsonify({"error": "Please enter a question."}), 400
+
+    result = answer_question(
+        question=question,
+        context_text=context,
+        file_type=file_type,
+        df_summary=df_summary,
+        chat_history=chat_history
+    )
+
+    return jsonify({
+        "answer":     result["answer"],
+        "confidence": result["confidence"],
+        "question":   question
+    })
+
+
+@app.route('/api/qna/<int:report_id>', methods=['POST'])
+@login_required
+def qna_stored(report_id):
+    """
+    Q&A on a previously analyzed report stored in DB.
+    Called from view_report.html via fetch().
+    """
+    from utils.llm_engine import answer_question
+
+    data         = request.get_json()
+    question     = data.get("question", "").strip()
+    chat_history = data.get("chat_history", [])
+
+    if not question:
+        return jsonify({"error": "Please enter a question."}), 400
+
+    conn   = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT file_type, insights, key_insights, recommendations,
+               structured_breakdown, ml_result, nlp_result
+        FROM upload_history
+        WHERE id = ? AND user_id = ?
+    """, (report_id, session['user_id']))
+    report = cursor.fetchone()
+    conn.close()
+
+    if not report:
+        return jsonify({"error": "Report not found."}), 404
+
+    report = dict(report)
+
+    context_parts = []
+
+    if report.get("insights"):
+        context_parts.append(f"Executive Summary:\n{report['insights']}")
+
+    if report.get("key_insights"):
+        context_parts.append(f"Key Insights:\n{report['key_insights']}")
+
+    if report.get("recommendations"):
+        context_parts.append(f"Recommendations:\n{report['recommendations']}")
+
+    if report.get("structured_breakdown"):
+        context_parts.append(f"Detailed Breakdown:\n{report['structured_breakdown'][:2000]}")
+
+    if report.get("ml_result"):
+        context_parts.append(f"ML Analysis:\n{report['ml_result']}")
+
+    if report.get("nlp_result"):
+        context_parts.append(f"Keywords:\n{report['nlp_result']}")
+
+    context_text = "\n\n".join(context_parts)
+
+    result = answer_question(
+        question=question,
+        context_text=context_text,
+        file_type=report.get("file_type", ""),
+        chat_history=chat_history
+    )
+
+    return jsonify({
+        "answer":     result["answer"],
+        "confidence": result["confidence"],
+        "question":   question
+    })
+
 
 # ─── Settings ─────────────────────────────────────────────────────────────────
 
@@ -863,7 +962,6 @@ def forgot_password():
                 send_reset_email(email, link)
                 app.logger.info(f"✅ Reset email sent to {email}")
             except Exception as e:
-                # ← Log the FULL error so we can see it in Render logs
                 app.logger.error(f"❌ SMTP FAILED: {type(e).__name__}: {e}")
                 flash(f"Email failed to send: {str(e)}", "danger")
                 return render_template('auth-forgot-password-basic.html')
@@ -983,7 +1081,7 @@ def google_callback():
 
         conn.close()
 
-        session['user_id']  = user['id']        # ← works because of row_factory
+        session['user_id']  = user['id']
         session['username'] = user['username']
         session['avatar']   = picture
 
@@ -994,7 +1092,6 @@ def google_callback():
         app.logger.error(f"Google OAuth error: {e}", exc_info=True)
         flash("Google login failed. Please try again.", "danger")
         return redirect(url_for('login'))
-# ─── Run ──────────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
     app.run(debug=True)
