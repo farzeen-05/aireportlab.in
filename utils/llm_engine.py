@@ -25,7 +25,7 @@ def _get_client():
         _client = Groq(api_key=api_key)
     return _client
 
-MODEL = "llama3-8b-8192"   # fast, free, 8192 context
+MODEL = "openai/gpt-oss-20b"   # fast, free, 128K context (llama3-8b-8192 -> llama-3.1-8b-instant -> this, per console.groq.com/docs/deprecations)
 
 
 def _call_groq(prompt, max_tokens=1024, system=None):
