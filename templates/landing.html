@@ -26,23 +26,22 @@
     text-decoration: none;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
   }
 
   .l-nav-logo span { color: var(--accent); }
 
-  .l-nav-logo .dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
+  .l-logomark {
+    width: 28px; height: 28px;
+    border-radius: 8px;
     background: var(--accent);
-    display: inline-block;
-    animation: lpulse 2s ease-in-out infinite;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
   }
 
-  @keyframes lpulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50%       { opacity: 0.5; transform: scale(0.8); }
-  }
+  .l-logomark svg { display: block; }
 
   .l-nav-links {
     display: flex;
@@ -139,6 +138,12 @@
     background: var(--accent);
     animation: lpulse 1.5s infinite;
   }
+
+  @keyframes lpulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.5; transform: scale(0.8); }
+  }
+
 .l-hero h1 {
   font-family: var(--font-display);
   font-size: clamp(2.4rem, 5vw, 4.2rem);
@@ -319,7 +324,7 @@
     box-shadow: 0 1px 3px rgba(15,23,42,0.04), 0 16px 40px rgba(15,23,42,0.08);
   }
 
-  .l-feature-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; font-size: 1.25rem; }
+  .l-feature-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; font-size: 1.2rem; }
 
   .l-feature-card h3 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: -0.01em; }
 
@@ -410,7 +415,7 @@
     gap: 1rem;
   }
 
-  .l-footer .l-logo { font-family: var(--font-display); font-weight: 800; font-size: 1.1rem; color: var(--text); }
+  .l-footer .l-logo { font-family: var(--font-display); font-weight: 800; font-size: 1.1rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem; }
 
   .l-footer .l-footer-links { display: flex; gap: 2rem; list-style: none; }
 
@@ -741,7 +746,14 @@
   <!-- NAVBAR -->
   <nav class="l-nav">
     <a href="#" class="l-nav-logo">
-      <span class="dot"></span>
+      <span class="l-logomark">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 13V8.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M8 13V3" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M13 13V6" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="13" cy="3.2" r="1.4" fill="white"/>
+        </svg>
+      </span>
       aire<span>port</span>lab
     </a>
     <ul class="l-nav-links">
@@ -760,7 +772,7 @@
     <div class="l-hero-inner">
       <div class="l-badge-pill">
         <span class="blink"></span>
-        AI-Powered · ML · NLP · Deep Learning
+        AI-Powered · ML · NLP · Deep Learning · AI Chat
       </div>
 
       <h1>
@@ -775,7 +787,7 @@
 
       <div class="l-hero-actions">
         <a href="{{ url_for('login') }}" class="l-btn l-btn-primary l-btn-lg">
-          ⚡ Start Analyzing for Free
+          <i class="bx bx-rocket"></i> Start Analyzing for Free
         </a>
         <a href="#l-features" class="l-btn l-btn-ghost l-btn-lg">See Features →</a>
       </div>
@@ -891,45 +903,52 @@
     <div class="l-features-grid">
 
       <div class="l-feature-card l-reveal">
-        <div class="l-feature-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">📊</div>
+        <div class="l-feature-icon" style="background:#eff6ff;color:#2563eb;"><i class="bx bx-bar-chart-alt-2"></i></div>
         <h3>Smart Data Analysis</h3>
         <p>Automatically clean, parse, and analyze structured data. Get statistical summaries, outlier detection, and data quality scores instantly.</p>
         <span class="l-tag" style="background:#eff6ff;color:#1d4ed8;">ML-Powered</span>
       </div>
 
       <div class="l-feature-card l-reveal">
-        <div class="l-feature-icon" style="background:rgba(34,197,94,0.12);color:#22c55e;">📈</div>
+        <div class="l-feature-icon" style="background:#f0fdf4;color:#16a34a;"><i class="bx bx-line-chart"></i></div>
         <h3>Visual Insights</h3>
         <p>Dynamic charts, trend lines, heatmaps, and interactive dashboards generated automatically from your uploaded data.</p>
         <span class="l-tag" style="background:#f0fdf4;color:#15803d;">Auto-Generated</span>
       </div>
 
       <div class="l-feature-card l-reveal">
-        <div class="l-feature-icon" style="background:rgba(167,139,250,0.12);color:#a78bfa;">🧠</div>
+        <div class="l-feature-icon" style="background:#f5f3ff;color:#7c3aed;"><i class="bx bx-file-blank"></i></div>
         <h3>AI Report Generation</h3>
         <p>Natural language summaries and executive reports generated from your data using advanced NLP — ready to share in seconds.</p>
         <span class="l-tag" style="background:#f5f3ff;color:#6d28d9;">NLP</span>
       </div>
 
       <div class="l-feature-card l-reveal">
-        <div class="l-feature-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;">⚡</div>
+        <div class="l-feature-icon" style="background:#fffbeb;color:#d97706;"><i class="bx bx-error-alt"></i></div>
         <h3>Anomaly Detection</h3>
         <p>Automatically identify unusual patterns, data spikes, missing values, and statistical outliers that matter most to your analysis.</p>
         <span class="l-tag" style="background:#fffbeb;color:#92400e;">Deep Learning</span>
       </div>
 
       <div class="l-feature-card l-reveal">
-        <div class="l-feature-icon" style="background:rgba(239,68,68,0.12);color:#ef4444;">📄</div>
+        <div class="l-feature-icon" style="background:#fef2f2;color:#dc2626;"><i class="bx bx-file-find"></i></div>
         <h3>Document Intelligence</h3>
         <p>Extract, summarize, and analyze text from PDFs and DOCX files. Understand documents without reading every line.</p>
         <span class="l-tag" style="background:#fef2f2;color:#b91c1c;">OCR + NLP</span>
       </div>
 
       <div class="l-feature-card l-reveal">
-        <div class="l-feature-icon" style="background:rgba(20,184,166,0.12);color:#14b8a6;">📤</div>
+        <div class="l-feature-icon" style="background:#f0fdfa;color:#0d9488;"><i class="bx bx-history"></i></div>
         <h3>Export & History</h3>
         <p>All your reports are saved with full history. Export findings, share dashboards, and track every analysis over time.</p>
         <span class="l-tag" style="background:#f0fdfa;color:#0f766e;">Full History</span>
+      </div>
+
+      <div class="l-feature-card l-reveal">
+        <div class="l-feature-icon" style="background:#eff6ff;color:#2563eb;"><i class="bx bx-chat"></i></div>
+        <h3>Ask AI About Your Data</h3>
+        <p>Chat with your report in plain English. Every answer is grounded in your actual data — summary, breakdown, and keywords — not a generic reply.</p>
+        <span class="l-tag" style="background:#eff6ff;color:#1d4ed8;">AI Chat</span>
       </div>
 
     </div>
@@ -1004,7 +1023,17 @@
 
   <!-- FOOTER -->
   <footer class="l-footer">
-    <div class="l-logo">aireportlab</div>
+    <div class="l-logo">
+      <span class="l-logomark">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 13V8.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M8 13V3" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M13 13V6" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="13" cy="3.2" r="1.4" fill="white"/>
+        </svg>
+      </span>
+      aireportlab
+    </div>
     <ul class="l-footer-links">
       <li><a href="#l-features">Features</a></li>
       <li><a href="#l-how">How it Works</a></li>
